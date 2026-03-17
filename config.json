@@ -1,0 +1,20 @@
+{
+    "collect_interval": "5s",
+    "http_port": "32245",
+    "max_history_size": 100,
+    "log_level": "info",
+    "network_targets": [
+        {
+            "name": "Google DNS",
+            "address": "8.8.8.8:53",
+            "protocol": "udp",
+            "interval": "10s",
+            "timeout": "5s"
+        },
+        {
+            "name": "Local Router",
+            "address": "192.168.0.1:80",
+            "interval": "5s"
+        }
+    ]
+}

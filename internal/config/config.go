@@ -1,0 +1,70 @@
+package config
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+)
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	d.Duration = dur
+	return nil
+}
+
+type NetworkTarget struct {
+	Name     string   `json:"name"`
+	Address  string   `json:"address"`
+	Protocol string   `json:"protocol,omitempty"`
+	Interval Duration `json:"interval"`
+	Timeout  Duration `json:"timeout,omitempty"`
+}
+
+type Config struct {
+	CollectInterval Duration        `json:"collect_interval"`
+	HTTPPort        string          `json:"http_port"`
+	MaxHistorySize  int             `json:"max_history_size"`
+	LogLevel        string          `json:"log_level"`
+	NetworkTargets  []NetworkTarget `json:"network_targets"`
+}
+
+func (c *Config) setDefaults() {
+	c.CollectInterval = Duration{5 * time.Second}
+	c.HTTPPort = "8080"
+	c.MaxHistorySize = 100
+	c.LogLevel = "info"
+}
+
+func Load(path string) (*Config, error) {
+	config := &Config{}
+
+	config.setDefaults()
+
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return config, nil
+		}
+		return nil, fmt.Errorf("cannot open config file: %w", err)
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(config); err != nil {
+		return nil, fmt.Errorf("cannot parse config file: %w", err)
+	}
+
+	return config, nil
+}
