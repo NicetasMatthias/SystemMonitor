@@ -36,7 +36,7 @@ func (s *Server) routes() {
 
 	s.router.HandleFunc("/", s.handleIndex())
 
-	s.router.HandleFunc("api/stats", s.handleApiStats())
+	s.router.HandleFunc("/api/stats", s.handleApiStats())
 }
 
 func (s *Server) handleIndex() http.HandlerFunc {
