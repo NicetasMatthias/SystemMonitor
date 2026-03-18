@@ -1,6 +1,6 @@
 module github.com/NicetasMatthias/SystemMonitor
 
-go 1.26.1
+go 1.23
 
 require (
 	github.com/gorilla/mux v1.8.1

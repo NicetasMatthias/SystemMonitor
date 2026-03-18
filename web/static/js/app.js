@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchStats() {
     try {
-        const response = await fetch('/api/stats');
+        const response = await fetch('api/stats');
         const data = await response.json();
         updateCharts(data.System);
         updateNetworkStatus(data.NetworkStats);
