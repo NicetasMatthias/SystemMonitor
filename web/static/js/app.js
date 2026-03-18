@@ -10,8 +10,9 @@ async function fetchStats() {
     try {
         const response = await fetch('/api/stats');
         const data = await response.json();
-        updateCharts(data);
-        updateNetworkStatus(data);
+        updateCharts(data.System);
+        updateNetworkStatus(data.NetworkStats);
+        updateDiskStatus(data.DiskStats)
     } catch (error) {
         console.error('Error fetching stats:', error);
     }
@@ -96,15 +97,11 @@ function updateCharts(stats) {
 }
 
 function updateNetworkStatus(stats) {
-    if (stats.length === 0) return;
-    
-    const latestStats = stats[stats.length - 1];
-    const networks = latestStats.Networks || {};
     const container = document.getElementById('networkStatus');
     
     container.innerHTML = '';
     
-    const sortedTargets = Object.entries(networks).sort((a, b) => 
+    const sortedTargets = Object.entries(stats).sort((a, b) => 
         a[0].localeCompare(b[0])
     );
     
@@ -123,6 +120,50 @@ function updateNetworkStatus(stats) {
             <div class="status">
                 ${status.Reachable ? 'Online' : 'Offline'}
                 ${status.Latency ? `<br>${(status.Latency / 1000000).toFixed(2)}ms` : ''}
+            </div>
+        `;
+        
+        container.appendChild(item);
+    }
+}
+
+function updateDiskStatus(diskStats) {
+    const container = document.getElementById('diskStatus');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    for (const [diskPath, stats] of Object.entries(diskStats)) {
+        const item = document.createElement('div');
+        item.className = 'disk-item';
+        
+        // Рассчитываем процент использования
+        const usedPercent = ((stats.Used / stats.Total) * 100).toFixed(1);
+        
+        // Определяем цвет в зависимости от заполненности
+        let statusClass = 'disk-ok';
+        if (usedPercent > 90) {
+            statusClass = 'disk-critical';
+        } else if (usedPercent > 75) {
+            statusClass = 'disk-warning';
+        }
+        
+        // Форматируем размеры в ГБ с одним знаком после запятой
+        const usedGB = stats.Used.toFixed(1);
+        const totalGB = stats.Total.toFixed(1);
+        const freeGB = (stats.Total - stats.Used).toFixed(1);
+        
+        item.innerHTML = `
+            <div class="disk-info">
+                <div class="disk-name">${diskPath}</div>
+                <div class="disk-stats">
+                    Used: ${usedGB} GB / ${totalGB} GB (${usedPercent}%)
+                </div>
+                <div class="disk-bar">
+                    <div class="disk-bar-fill ${statusClass}" style="width: ${usedPercent}%"></div>
+                </div>
+                <div class="disk-free">Free: ${freeGB} GB</div>
             </div>
         `;
         

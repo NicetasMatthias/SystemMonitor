@@ -35,8 +35,8 @@ func main() {
 		})
 	}
 
-	col := collector.New(cfg.MaxHistorySize, targets)
-	col.Start(cfg.CollectInterval.Duration)
+	col := collector.New(cfg.MaxHistorySize, targets, cfg.DiskPaths, cfg.DiskCollectInterval.Duration)
+	col.Start(cfg.NetworkCollectInterval.Duration)
 
 	srv := server.New(col)
 

@@ -1,5 +1,6 @@
 {
-    "collect_interval": "5s",
+    "network_collect_interval": "5s",
+    "disk_collect_interval": "20s",
     "http_port": "32245",
     "max_history_size": 100,
     "log_level": "info",
@@ -16,5 +17,6 @@
             "address": "192.168.0.1:80",
             "interval": "5s"
         }
-    ]
+    ],
+    "diskPaths" : []
 }

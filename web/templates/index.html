@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,28 +8,38 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <div class="container">
-        <h1>📊 System Monitor</h1>
-        
+        <h1>System Monitor</h1>
+
         <div class="stats-container">
             <div class="card">
                 <h2>CPU Usage</h2>
                 <canvas id="cpuChart"></canvas>
             </div>
-            
+
             <div class="card">
                 <h2>Memory Usage</h2>
                 <canvas id="memoryChart"></canvas>
             </div>
         </div>
-        
-        <div class="card">
-            <h2>🌐 Network Status</h2>
-            <div id="networkStatus" class="network-grid"></div>
+
+        <div class="stats-container">
+            <div class="card">
+                <h2>Disk Status</h2>
+                <div id="diskStatus" class="disk-grid"></div>
+            </div>
+        </div>
+        <div class="stats-container">
+            <div class="card">
+                <h2>Network Status</h2>
+                <div id="networkStatus" class="network-grid"></div>
+            </div>
         </div>
     </div>
-    
+
     <script src="/static/js/app.js"></script>
 </body>
+
 </html>
