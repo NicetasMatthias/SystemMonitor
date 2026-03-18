@@ -44,7 +44,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Server starting on port %s", cfg.HTTPPort)
+		log.Printf("Server starting on http://127.0.0.1:%s", cfg.HTTPPort)
 		if err := srv.Start(cfg.HTTPPort); err != nil {
 			log.Printf("Server error: %v", err)
 		}
