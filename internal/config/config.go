@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -33,15 +34,17 @@ type NetworkTarget struct {
 }
 
 type Config struct {
-	CollectInterval Duration        `json:"collect_interval"`
-	HTTPPort        string          `json:"http_port"`
-	MaxHistorySize  int             `json:"max_history_size"`
-	LogLevel        string          `json:"log_level"`
-	NetworkTargets  []NetworkTarget `json:"network_targets"`
+	NetworkCollectInterval Duration        `json:"network_collect_interval"`
+	DiskCollectInterval    Duration        `json:"disk_collect_interval"`
+	HTTPPort               string          `json:"http_port"`
+	MaxHistorySize         int             `json:"max_history_size"`
+	LogLevel               string          `json:"log_level"`
+	NetworkTargets         []NetworkTarget `json:"network_targets"`
+	DiskPaths              []string        `json:"sidk_paths"`
 }
 
 func (c *Config) setDefaults() {
-	c.CollectInterval = Duration{5 * time.Second}
+	c.NetworkCollectInterval = Duration{5 * time.Second}
 	c.HTTPPort = "8080"
 	c.MaxHistorySize = 100
 	c.LogLevel = "info"
@@ -51,6 +54,7 @@ func Load(path string) (*Config, error) {
 	config := &Config{}
 
 	config.setDefaults()
+	defer config.fallbackPath()
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -67,4 +71,14 @@ func Load(path string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func (c *Config) fallbackPath() {
+	if len(c.DiskPaths) == 0 {
+		if runtime.GOOS == "windows" {
+			c.DiskPaths = append(c.DiskPaths, "C:\\\\")
+		} else {
+			c.DiskPaths = append(c.DiskPaths, "/")
+		}
+	}
 }

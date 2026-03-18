@@ -2,7 +2,6 @@ package collector
 
 import (
 	"context"
-	"net"
 	"sync"
 	"time"
 
@@ -10,18 +9,28 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
+type ExportStats struct {
+	System       []SystemStats
+	NetworkStats map[string]NetworkStatus
+	DiskStats    map[string]DiskStatus
+}
+
 type SystemStats struct {
 	Timestamp   time.Time
 	CPUUsage    float64
 	MemoryUsed  uint64
 	MemoryTotal uint64
-	Networks    map[string]NetworkStatus
 }
 
 type NetworkStatus struct {
 	Reachable bool
 	Latency   time.Duration
 	LastCheck time.Time
+}
+
+type DiskStatus struct {
+	Used  float64
+	Total float64
 }
 
 type NetworkTarget struct {
@@ -31,47 +40,62 @@ type NetworkTarget struct {
 	Timeout  time.Duration
 }
 
-type Collecor struct {
-	mu         sync.RWMutex
-	stats      []SystemStats
-	maxHistory int
-	targets    []NetworkTarget
-	ctx        context.Context
-	cancel     context.CancelFunc
+type Collector struct {
+	mu               sync.RWMutex
+	systemStats      []SystemStats
+	maxHistory       int
+	networkStats     map[string]NetworkStatus
+	targets          []NetworkTarget
+	diskPaths        []string
+	diskStat         map[string]DiskStatus
+	diskCheckTimeout time.Duration
+	ctx              context.Context
+	cancel           context.CancelFunc
 }
 
-func New(maxHistory int, targets []NetworkTarget) *Collecor {
+func New(maxHistory int, targets []NetworkTarget, diskPaths []string, diskCheckInterval time.Duration) *Collector {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Collecor{
-		stats:      make([]SystemStats, 0, maxHistory),
-		maxHistory: maxHistory,
-		targets:    targets,
-		ctx:        ctx,
-		cancel:     cancel,
+	return &Collector{
+		systemStats:      make([]SystemStats, 0, maxHistory),
+		maxHistory:       maxHistory,
+		networkStats:     make(map[string]NetworkStatus),
+		diskStat:         make(map[string]DiskStatus),
+		diskCheckTimeout: diskCheckInterval,
+		targets:          targets,
+		diskPaths:        diskPaths,
+		ctx:              ctx,
+		cancel:           cancel,
 	}
 }
 
-func (c *Collecor) Start(interval time.Duration) {
+func (c *Collector) Start(interval time.Duration) {
 	go c.collectLoop(interval)
+	go c.diskCheckLoop()
 	for _, target := range c.targets {
 		go c.networkCheckLoop(target)
 	}
+
 }
 
-func (c *Collecor) Stop() {
+func (c *Collector) Stop() {
 	c.cancel()
 }
 
-func (c *Collecor) GetStats() []SystemStats {
+func (c *Collector) GetStats() ExportStats {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	result := make([]SystemStats, len(c.stats))
-	copy(result, c.stats)
+	result := ExportStats{
+		System:       make([]SystemStats, len(c.systemStats)),
+		NetworkStats: c.networkStats,
+		DiskStats:    c.diskStat,
+	}
+
+	copy(result.System, c.systemStats)
 	return result
 }
 
-func (c *Collecor) collectLoop(interval time.Duration) {
+func (c *Collector) collectLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -87,7 +111,7 @@ func (c *Collecor) collectLoop(interval time.Duration) {
 	}
 }
 
-func (c *Collecor) collect() {
+func (c *Collector) collect() {
 
 	cpuPercent, _ := cpu.Percent(0, false)
 	cpuUsage := 0.0
@@ -102,58 +126,13 @@ func (c *Collecor) collect() {
 		CPUUsage:    cpuUsage,
 		MemoryUsed:  memStat.Used,
 		MemoryTotal: memStat.Total,
-		Networks:    make(map[string]NetworkStatus),
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.stats = append(c.stats, stats)
-	if len(c.stats) > c.maxHistory {
-		c.stats = c.stats[1:]
-	}
-}
-
-func (c *Collecor) networkCheckLoop(target NetworkTarget) {
-	ticker := time.NewTicker(target.Interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case <-ticker.C:
-			status := c.checkNetwork(target)
-
-			c.mu.Lock()
-			if len(c.stats) > 0 {
-				lastStats := &c.stats[len(c.stats)-1]
-				lastStats.Networks[target.Name] = status
-			}
-			c.mu.Unlock()
-		}
-	}
-}
-
-func (c *Collecor) checkNetwork(target NetworkTarget) NetworkStatus {
-	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), target.Timeout)
-	defer cancel()
-
-	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "tcp", target.Address)
-
-	if err != nil {
-		return NetworkStatus{
-			Reachable: false,
-			LastCheck: time.Now(),
-		}
-	}
-	conn.Close()
-
-	return NetworkStatus{
-		Reachable: true,
-		Latency:   time.Since(start),
-		LastCheck: time.Now(),
+	c.systemStats = append(c.systemStats, stats)
+	if len(c.systemStats) > c.maxHistory {
+		c.systemStats = c.systemStats[1:]
 	}
 }

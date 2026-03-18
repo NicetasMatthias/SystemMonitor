@@ -12,11 +12,11 @@ import (
 
 type Server struct {
 	router    *mux.Router
-	collector *collector.Collecor
+	collector *collector.Collector
 	templates *template.Template
 }
 
-func New(collector *collector.Collecor) *Server {
+func New(collector *collector.Collector) *Server {
 	s := &Server{
 		router:    mux.NewRouter(),
 		collector: collector,
