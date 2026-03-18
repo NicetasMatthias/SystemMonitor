@@ -3,12 +3,27 @@ package server
 import (
 	"encoding/json"
 	"html/template"
+	"mime"
 	"net/http"
 	"time"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/gorilla/mux"
 )
+
+func init() {
+	mime.AddExtensionType(".css", "text/css")
+	mime.AddExtensionType(".js", "application/javascript")
+	mime.AddExtensionType(".json", "application/json")
+	mime.AddExtensionType(".png", "image/png")
+	mime.AddExtensionType(".jpg", "image/jpeg")
+	mime.AddExtensionType(".jpeg", "image/jpeg")
+	mime.AddExtensionType(".gif", "image/gif")
+	mime.AddExtensionType(".svg", "image/svg+xml")
+	mime.AddExtensionType(".woff", "font/woff")
+	mime.AddExtensionType(".woff2", "font/woff2")
+	mime.AddExtensionType(".ttf", "font/ttf")
+}
 
 type Server struct {
 	router    *mux.Router
