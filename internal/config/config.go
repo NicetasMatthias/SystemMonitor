@@ -38,7 +38,6 @@ type Config struct {
 	DiskCollectInterval    Duration        `json:"disk_collect_interval"`
 	HTTPPort               string          `json:"http_port"`
 	MaxHistorySize         int             `json:"max_history_size"`
-	LogLevel               string          `json:"log_level"`
 	NetworkTargets         []NetworkTarget `json:"network_targets"`
 	DiskPaths              []string        `json:"sidk_paths"`
 }
@@ -47,7 +46,6 @@ func (c *Config) setDefaults() {
 	c.NetworkCollectInterval = Duration{5 * time.Second}
 	c.HTTPPort = "8080"
 	c.MaxHistorySize = 100
-	c.LogLevel = "info"
 }
 
 func Load(path string) (*Config, error) {
