@@ -34,6 +34,6 @@ deps:
 
 clean:
 	@echo "Cleaning..."
-	rm -rf $(BINARY_DIR) $(DEV_BINARY_DIR)
+	rm -rf $(BINARY_DIR)
 	go clean
 
