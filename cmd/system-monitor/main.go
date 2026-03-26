@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,14 +9,25 @@ import (
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
+	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
 	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
 func main() {
+
+	err := logger.Init()
+	if err != nil {
+		slog.Error("Failed to setup logger",
+			slog.Any("error", err))
+		panic(err)
+	}
+
 	cfg, err := config.Load("config.json")
 
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		slog.Error("Failed to load config",
+			slog.Any("error", err))
+		panic(err)
 	}
 
 	var targets []collector.NetworkTarget
@@ -44,17 +55,21 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Server starting on http://127.0.0.1:%s", cfg.HTTPPort)
+		slog.Info("Server staring",
+			slog.String("port", cfg.HTTPPort))
+
 		if err := srv.Start(cfg.HTTPPort); err != nil {
-			log.Printf("Server error: %v", err)
+
+			slog.Error("Server statup failed",
+				slog.Any("error", err))
 		}
 	}()
 
 	<-sigChan
-	log.Println("Shutting down gracefully...")
+	slog.Info("Shutting down gracefully...")
 
 	col.Stop()
 
 	time.Sleep(1 * time.Second)
-	log.Println("Shutdown complete")
+	slog.Info("Shutdown complete")
 }

@@ -1,8 +1,14 @@
-BINARY_NAME=system-monitor
+
+ifeq ($(OS),Windows_NT)
+    BINARY_NAME=system-monitor.exe
+else
+    BINARY_NAME=system-monitor
+endif
+
 BINARY_DIR=bin
 MAIN_PACKAGE=./cmd/system-monitor
 
-.PHONY: all build clean test run deps help
+.PHONY: all build clean run run-prod deps help
 
 all: deps build
 
@@ -14,14 +20,12 @@ build: deps
 	@echo "Building..."
 	go build -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo "Done! Binary: $(BINARY_DIR)/$(BINARY_NAME)"
-
-run: build
-	@echo "Running..."
-	./$(BINARY_DIR)/$(BINARY_NAME)
-
-test:
-	@echo "Running tests..."
-	go test -v -race ./...
+	
+run: deps
+	go run -tags "dev" $(MAIN_PACKAGE)
+	
+run-prod: deps
+	go run $(MAIN_PACKAGE)
 
 deps:
 	@echo "Downloading dependencies..."
@@ -32,3 +36,4 @@ clean:
 	@echo "Cleaning..."
 	rm -rf $(BINARY_DIR)
 	go clean
+

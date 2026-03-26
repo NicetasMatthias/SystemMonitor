@@ -3,7 +3,6 @@
     "disk_collect_interval": "20s",
     "http_port": "32245",
     "max_history_size": 100,
-    "log_level": "info",
     "network_targets": [
         {
             "name": "Google DNS",
