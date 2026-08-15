@@ -30,6 +30,11 @@ func main() {
 		panic(err)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		slog.Error(err.Error())
+		panic(err)
+	}
+
 	var targets []collector.NetworkTarget
 
 	for _, t := range cfg.NetworkTargets {
@@ -60,7 +65,7 @@ func main() {
 
 		if err := srv.Start(cfg.HTTPPort); err != nil {
 
-			slog.Error("Server statup failed",
+			slog.Error("Server startup failed",
 				slog.Any("error", err))
 		}
 	}()
