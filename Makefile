@@ -8,7 +8,7 @@ endif
 BINARY_DIR=bin
 MAIN_PACKAGE=./cmd/system-monitor
 
-.PHONY: all build clean run run-prod deps help
+.PHONY: all build clean run run-prod deps help test
 
 all: deps build
 
@@ -36,4 +36,8 @@ clean:
 	@echo "Cleaning..."
 	rm -rf $(BINARY_DIR)
 	go clean
+
+test: deps
+	go test ./...
+
 

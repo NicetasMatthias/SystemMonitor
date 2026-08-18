@@ -22,11 +22,16 @@ func main() {
 		panic(err)
 	}
 
-	cfg, err := config.Load("config.json")
+	cfg, err := config.Load("config.json") //=== TODO: set proper config path
 
 	if err != nil {
 		slog.Error("Failed to load config",
 			slog.Any("error", err))
+		panic(err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		slog.Error(err.Error())
 		panic(err)
 	}
 
@@ -60,7 +65,7 @@ func main() {
 
 		if err := srv.Start(cfg.HTTPPort); err != nil {
 
-			slog.Error("Server statup failed",
+			slog.Error("Server startup failed",
 				slog.Any("error", err))
 		}
 	}()

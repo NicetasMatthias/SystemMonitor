@@ -17,5 +17,7 @@
             "interval": "5s"
         }
     ],
-    "diskPaths" : []
+    "diskPaths": [
+        "/"
+    ]
 }
