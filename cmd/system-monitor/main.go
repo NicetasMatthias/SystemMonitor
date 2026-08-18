@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	cfg, err := config.Load("config.json")
+	cfg, err := config.Load("config.json") //=== TODO: set proper config path
 
 	if err != nil {
 		slog.Error("Failed to load config",

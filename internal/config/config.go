@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -49,12 +48,6 @@ type Config struct {
 	MaxHistorySize         int             `json:"max_history_size"`
 	NetworkTargets         []NetworkTarget `json:"network_targets"`
 	DiskPaths              []string        `json:"disk_paths"`
-}
-
-func (c *Config) setDefaults() {
-	c.NetworkCollectInterval = Duration{5 * time.Second}
-	c.HTTPPort = "8080"
-	c.MaxHistorySize = 100
 }
 
 func (c Config) Validate() error {
@@ -119,39 +112,28 @@ func (nt NetworkTarget) Validate() error {
 }
 
 func Load(path string) (*Config, error) {
-	config := &Config{}
 
-	config.setDefaults()
-	defer config.fallbackPath()
+	r := &Config{}
 
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return config, nil
+			return nil, fmt.Errorf("config file not exist: %w", err)
+		} else {
+			return nil, fmt.Errorf("cannot open config file: %w", err)
 		}
-		return nil, fmt.Errorf("cannot open config file: %w", err)
 	}
+
 	defer func() {
 		if err := file.Close(); err != nil {
 			slog.Warn("Failed to close config file", slog.Any("error", err))
 		}
-
 	}()
 
 	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(config); err != nil {
+	if err := decoder.Decode(r); err != nil {
 		return nil, fmt.Errorf("cannot parse config file: %w", err)
 	}
 
-	return config, nil
-}
-
-func (c *Config) fallbackPath() {
-	if len(c.DiskPaths) == 0 {
-		if runtime.GOOS == "windows" {
-			c.DiskPaths = append(c.DiskPaths, "C:\\\\")
-		} else {
-			c.DiskPaths = append(c.DiskPaths, "/")
-		}
-	}
+	return r, nil
 }
