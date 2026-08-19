@@ -22,17 +22,6 @@ type SystemStats struct {
 	MemoryTotal uint64
 }
 
-type NetworkStatus struct {
-	Reachable bool
-	Latency   time.Duration
-	LastCheck time.Time
-}
-
-type DiskStatus struct {
-	Used  float64
-	Total float64
-}
-
 type NetworkTarget struct {
 	Name     string
 	Address  string
@@ -82,16 +71,25 @@ func (c *Collector) Stop() {
 }
 
 func (c *Collector) GetStats() ExportStats {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	result := ExportStats{
 		System:       make([]SystemStats, len(c.systemStats)),
-		NetworkStats: c.networkStats,
-		DiskStats:    c.diskStat,
+		NetworkStats: make(map[string]NetworkStatus, len(c.networkStats)),
+		DiskStats:    make(map[string]DiskStatus, len(c.diskStat)),
 	}
 
 	copy(result.System, c.systemStats)
+
+	for name, stat := range c.networkStats {
+		result.NetworkStats[name] = stat
+	}
+
+	for path, stat := range c.diskStat {
+		result.DiskStats[path] = stat
+	}
+
 	return result
 }
 
