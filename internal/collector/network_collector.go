@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+type NetworkStatus struct {
+	Reachable bool
+	Latency   time.Duration
+	LastCheck time.Time
+}
+
 func (c *Collector) networkCheckLoop(target NetworkTarget) {
 	ticker := time.NewTicker(target.Interval)
 	defer ticker.Stop()
