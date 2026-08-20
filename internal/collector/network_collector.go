@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"time"
 )
@@ -48,7 +49,12 @@ func (c *Collector) checkNetwork(target NetworkTarget) NetworkStatus {
 			LastCheck: time.Now(),
 		}
 	}
-	conn.Close()
+	if err := conn.Close(); err != nil {
+		slog.Warn("Failed to close check connection",
+			slog.Any("name", target.Name),
+			slog.Any("host", target.Address),
+			slog.Any("error", err))
+	}
 
 	return NetworkStatus{
 		Reachable: true,
