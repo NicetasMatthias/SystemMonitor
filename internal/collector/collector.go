@@ -68,7 +68,7 @@ func (c *Collector) Start(interval time.Duration) {
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		go c.diskCheckLoop()
+		c.diskCheckLoop()
 	}()
 
 	for _, target := range c.targets {

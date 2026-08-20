@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -64,7 +66,7 @@ func main() {
 		slog.Info("Server staring",
 			slog.String("port", cfg.HTTPPort))
 
-		if err := srv.Start(cfg.HTTPPort); err != nil {
+		if err := srv.Start(cfg.HTTPPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
 
 			slog.Error("Server startup failed",
 				slog.Any("error", err))
@@ -72,9 +74,8 @@ func main() {
 	}()
 
 	<-sigChan
-	slog.Info("Shutting down gracefully...")
 
-	col.Stop()
+	slog.Info("Shutting down gracefully...")
 
 	shutdownCtx, cancel := context.WithTimeout(
 		context.Background(),
@@ -85,6 +86,8 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Server shutdown failed", slog.Any("error", err))
 	}
+
+	col.Stop()
 
 	slog.Info("Shutdown complete")
 }
