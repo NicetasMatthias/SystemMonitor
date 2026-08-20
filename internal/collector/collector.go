@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -128,13 +129,22 @@ func (c *Collector) collectLoop(interval time.Duration) {
 
 func (c *Collector) collect() {
 
-	cpuPercent, _ := cpu.Percent(0, false)
+	//=== TODO: expand statistic for each cpu
+	cpuPercent, err := cpu.Percent(0, false)
+	if err != nil {
+		slog.Warn("Failed to get cpu data", slog.Any("error", err))
+		//=== TODO: metric invalidation
+	}
 	cpuUsage := 0.0
 	if len(cpuPercent) > 0 {
 		cpuUsage = cpuPercent[0]
 	}
 
-	memStat, _ := mem.VirtualMemory()
+	memStat, err := mem.VirtualMemory()
+	if err != nil {
+		slog.Warn("Failed to get virtual memory data", slog.Any("error", err))
+		//=== TODO: metric invalidation
+	}
 
 	stats := SystemStats{
 		Timestamp:   time.Now(),

@@ -1,12 +1,14 @@
 package collector
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/disk"
 )
 
 type DiskStatus struct {
+	Valid bool
 	Used  float64
 	Total float64
 }
@@ -34,9 +36,18 @@ func (c *Collector) diskCheckLoop() {
 }
 
 func checkDisk(diskPath string) DiskStatus {
-	diskStat, _ := disk.Usage(diskPath)
+	diskStat, err := disk.Usage(diskPath)
+	if err != nil {
+		slog.Warn("Failed to get disk",
+			slog.Any("disk path", diskPath),
+			slog.Any("error", err))
+		return DiskStatus{
+			Valid: true,
+		}
+	}
 	const gb = 1024 * 1024 * 1024
 	return DiskStatus{
+		Valid: true,
 		Used:  float64(diskStat.Used) / float64(gb),
 		Total: float64(diskStat.Total) / float64(gb),
 	}
