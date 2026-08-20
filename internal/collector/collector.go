@@ -40,6 +40,7 @@ type Collector struct {
 	diskCheckTimeout time.Duration
 	ctx              context.Context
 	cancel           context.CancelFunc
+	wg               sync.WaitGroup
 }
 
 func New(maxHistory int, targets []NetworkTarget, diskPaths []string, diskCheckInterval time.Duration) *Collector {
@@ -58,16 +59,32 @@ func New(maxHistory int, targets []NetworkTarget, diskPaths []string, diskCheckI
 }
 
 func (c *Collector) Start(interval time.Duration) {
-	go c.collectLoop(interval)
-	go c.diskCheckLoop()
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.collectLoop(interval)
+	}()
+
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		go c.diskCheckLoop()
+	}()
+
 	for _, target := range c.targets {
-		go c.networkCheckLoop(target)
+		c.wg.Add(1)
+
+		go func() {
+			defer c.wg.Done()
+			c.networkCheckLoop(target)
+		}()
 	}
 
 }
 
 func (c *Collector) Stop() {
 	c.cancel()
+	c.wg.Wait()
 }
 
 func (c *Collector) GetStats() ExportStats {

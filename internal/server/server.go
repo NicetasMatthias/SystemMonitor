@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"html/template"
 	"mime"
@@ -29,6 +30,7 @@ type Server struct {
 	router    *mux.Router
 	collector *collector.Collector
 	templates *template.Template
+	srv       *http.Server
 }
 
 func New(collector *collector.Collector) *Server {
@@ -56,8 +58,7 @@ func (s *Server) routes() {
 
 func (s *Server) handleIndex() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := s.templates.ExecuteTemplate(w, "index.html", nil)
-		if err != nil {
+		if err := s.templates.ExecuteTemplate(w, "index.html", nil); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
@@ -70,16 +71,22 @@ func (s *Server) handleApiStats() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		json.NewEncoder(w).Encode(stats)
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
 func (s *Server) Start(port string) error {
-	srv := &http.Server{
+	s.srv = &http.Server{
 		Handler:      s.router,
 		Addr:         ":" + port,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	return srv.ListenAndServe()
+	return s.srv.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.srv.Shutdown(ctx)
 }

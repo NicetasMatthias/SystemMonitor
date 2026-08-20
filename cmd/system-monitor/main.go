@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -75,6 +76,15 @@ func main() {
 
 	col.Stop()
 
-	time.Sleep(1 * time.Second)
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Server shutdown failed", slog.Any("error", err))
+	}
+
 	slog.Info("Shutdown complete")
 }
