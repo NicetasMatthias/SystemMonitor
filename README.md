@@ -1,6 +1,8 @@
 # SystemMonitor
 System monitoring daemon with web server
 
+[![CI](https://github.com/NicetasMatthias/SystemMonitor/actions/workflows/ci.yml/badge.svg)](https://github.com/NicetasMatthias/SystemMonitor/actions/workflows/ci.yml)
+
 
 ## Usage
 

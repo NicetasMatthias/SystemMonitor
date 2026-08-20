@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"html/template"
+	"log/slog"
 	"mime"
 	"net/http"
 	"time"
@@ -13,17 +14,26 @@ import (
 )
 
 func init() {
-	mime.AddExtensionType(".css", "text/css")
-	mime.AddExtensionType(".js", "application/javascript")
-	mime.AddExtensionType(".json", "application/json")
-	mime.AddExtensionType(".png", "image/png")
-	mime.AddExtensionType(".jpg", "image/jpeg")
-	mime.AddExtensionType(".jpeg", "image/jpeg")
-	mime.AddExtensionType(".gif", "image/gif")
-	mime.AddExtensionType(".svg", "image/svg+xml")
-	mime.AddExtensionType(".woff", "font/woff")
-	mime.AddExtensionType(".woff2", "font/woff2")
-	mime.AddExtensionType(".ttf", "font/ttf")
+	addMimeExtType(".css", "text/css")
+	addMimeExtType(".js", "application/javascript")
+	addMimeExtType(".json", "application/json")
+	addMimeExtType(".png", "image/png")
+	addMimeExtType(".jpg", "image/jpeg")
+	addMimeExtType(".jpeg", "image/jpeg")
+	addMimeExtType(".gif", "image/gif")
+	addMimeExtType(".svg", "image/svg+xml")
+	addMimeExtType(".woff", "font/woff")
+	addMimeExtType(".woff2", "font/woff2")
+	addMimeExtType(".ttf", "font/ttf")
+}
+
+func addMimeExtType(ext, typeStr string) {
+	if err := mime.AddExtensionType(ext, typeStr); err != nil {
+		slog.Error("Failed to add mime extension type",
+			slog.Any("extension", ext),
+			slog.Any("mime type", typeStr),
+			slog.Any("error", err))
+	}
 }
 
 type Server struct {
