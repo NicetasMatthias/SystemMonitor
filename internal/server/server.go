@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"mime"
 	"net/http"
 	"time"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
+	"github.com/NicetasMatthias/SystemMonitor/internal/web"
 	"github.com/gorilla/mux"
 )
 
@@ -49,7 +51,7 @@ func New(collector *collector.Collector) *Server {
 		collector: collector,
 	}
 
-	s.templates = template.Must(template.ParseGlob("web/templates/*html"))
+	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
 
 	s.routes()
 
@@ -57,8 +59,17 @@ func New(collector *collector.Collector) *Server {
 }
 
 func (s *Server) routes() {
+
+	staticFS, err := fs.Sub(web.FS, "static")
+	if err != nil {
+		panic(err)
+	}
+
 	s.router.PathPrefix("/static/").Handler(
-		http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))),
+		http.StripPrefix(
+			"/static/",
+			http.FileServer(http.FS(staticFS)),
+		),
 	)
 
 	s.router.HandleFunc("/", s.handleIndex())
