@@ -8,7 +8,7 @@ endif
 BINARY_DIR=bin
 MAIN_PACKAGE=./cmd/system-monitor
 
-.PHONY: all build clean run run-prod deps help test
+.PHONY: all build clean run run-prod deps help test test-race
 
 all: deps build
 
@@ -39,5 +39,8 @@ clean:
 
 test: deps
 	go test ./...
+
+test-race: deps
+	go test -race ./...
 
 
