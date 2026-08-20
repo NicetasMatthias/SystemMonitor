@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,11 +13,23 @@ import (
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
+	"github.com/NicetasMatthias/SystemMonitor/internal/info"
 	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
 	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		run()
+	} else if os.Args[1] == "version" || os.Args[1] == "--version" {
+		printVersion()
+	} else {
+		printHelp()
+	}
+
+}
+
+func run() {
 
 	err := logger.Init()
 	if err != nil {
@@ -73,6 +86,8 @@ func main() {
 		}
 	}()
 
+	slog.Info("system-monitor started", slog.Any("version", info.Version))
+
 	<-sigChan
 
 	slog.Info("Shutting down gracefully...")
@@ -90,4 +105,12 @@ func main() {
 	col.Stop()
 
 	slog.Info("Shutdown complete")
+}
+
+func printVersion() {
+	fmt.Println(info.Printable())
+}
+
+func printHelp() {
+	fmt.Println("wrong args") //=== TODO: write help
 }
