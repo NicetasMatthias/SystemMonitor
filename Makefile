@@ -1,3 +1,13 @@
+VERSION ?= dev
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+DATE ?= $(shell date -u +"%Y-%m-%d %H:%M:%S")
+
+INFO_PKG := github.com/NicetasMatthias/SystemMonitor/internal/info
+
+LDFLAGS := \
+	-X $(INFO_PKG).Version=$(VERSION) \
+	-X $(INFO_PKG).Commit=$(COMMIT) \
+	-X $(INFO_PKG).Date=$(DATE)
 
 ifeq ($(OS),Windows_NT)
     BINARY_NAME=system-monitor.exe
@@ -8,7 +18,7 @@ endif
 BINARY_DIR=bin
 MAIN_PACKAGE=./cmd/system-monitor
 
-.PHONY: all build clean run run-prod deps help test test-race
+.PHONY: all build clean run run-prod deps help test test-race info
 
 all: deps build
 
@@ -18,7 +28,7 @@ help:
 
 build: deps
 	@echo "Building..."
-	go build -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
+	go build -ldflags "$(LDFLAGS)" -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo "Done! Binary: $(BINARY_DIR)/$(BINARY_NAME)"
 	
 run: deps
@@ -43,4 +53,7 @@ test: deps
 test-race: deps
 	go test -race ./...
 
-
+info:
+	@echo "Version: $(VERSION)"
+	@echo "Commit:  $(COMMIT)"
+	@echo "Date:    $(DATE)"
