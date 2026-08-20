@@ -18,7 +18,7 @@ endif
 BINARY_DIR=bin
 MAIN_PACKAGE=./cmd/system-monitor
 
-.PHONY: all build clean run run-prod deps help test test-race info
+.PHONY: all build clean run run-prod deps help test test-race lint info
 
 all: deps build
 
@@ -52,6 +52,9 @@ test: deps
 
 test-race: deps
 	go test -race ./...
+
+lint: deps
+	golangci-lint run
 
 info:
 	@echo "Version: $(VERSION)"
