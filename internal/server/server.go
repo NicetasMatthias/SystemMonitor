@@ -92,7 +92,6 @@ func (s *Server) routes() {
 
 func (s *Server) handleIndex() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("Router", slog.Any("path", "/"))
 		if err := s.templates.ExecuteTemplate(w, "index.html", nil); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -101,8 +100,6 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 func (s *Server) handleApiStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/"))
 		stats := s.collector.Get()
 
 		w.Header().Set("Content-Type", "application/json")
@@ -116,8 +113,6 @@ func (s *Server) handleApiStats() http.HandlerFunc {
 
 func (s *Server) handleApiStatsCPU() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/cpu"))
 		stats := s.collector.GetCPU()
 
 		w.Header().Set("Content-Type", "application/json")
@@ -131,8 +126,6 @@ func (s *Server) handleApiStatsCPU() http.HandlerFunc {
 
 func (s *Server) handleApiStatsDisk() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/disk"))
 		stats := s.collector.GetDisk()
 
 		w.Header().Set("Content-Type", "application/json")
@@ -146,8 +139,6 @@ func (s *Server) handleApiStatsDisk() http.HandlerFunc {
 
 func (s *Server) handleApiStatsMemory() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/memory"))
 		stats := s.collector.GetMemory()
 
 		w.Header().Set("Content-Type", "application/json")
@@ -161,8 +152,6 @@ func (s *Server) handleApiStatsMemory() http.HandlerFunc {
 
 func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/network"))
 		stats := s.collector.GetNetwork()
 
 		w.Header().Set("Content-Type", "application/json")
@@ -176,8 +165,6 @@ func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
 
 func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		slog.Info("Router", slog.Any("path", "/api/stats/system"))
 		stats := s.collector.GetSystem()
 
 		w.Header().Set("Content-Type", "application/json")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,7 +86,10 @@ func collectMountpointStats() []MountpointStat {
 	}
 
 	for _, partition := range partitions {
-
+		if strings.HasPrefix(partition.Mountpoint, "/snap/") ||
+			strings.HasPrefix(partition.Device, "loop") {
+			continue
+		}
 		r = append(r, MountpointStat{
 			Mountpoint: partition.Mountpoint,
 			Device:     partition.Device,
@@ -147,6 +151,9 @@ func (c *diskCollector) updateDeviceStats() {
 	}
 
 	for device, data := range counters {
+		if strings.HasPrefix(device, "loop") {
+			continue
+		}
 		c.addDeviceSample(device,
 			DeviceIOData{
 				Valid:      true,
