@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -110,6 +111,7 @@ func (c *diskCollector) addDeviceSample(device string, data DeviceIOData) {
 				lastIOData: data,
 			}
 		} else {
+			slog.Warn("Receive invalid device I/O data", slog.Any("device", device))
 			//== TODO: log
 		}
 		return
