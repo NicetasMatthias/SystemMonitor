@@ -18,17 +18,17 @@ type memoryCollector struct {
 }
 
 type MemoryExport struct {
-	History []MemorySample
+	History []MemorySample `json:"history"`
 }
 
 type MemorySample struct {
-	Valid     bool
-	Timestamp time.Time
+	Valid     bool      `json:"valid"`
+	Timestamp time.Time `json:"timestamp"`
 
-	Total      uint64
-	Used       uint64
-	Available  uint64
-	Percentage float64
+	Total      uint64  `json:"total"`
+	Used       uint64  `json:"used"`
+	Available  uint64  `json:"available"`
+	Percentage float64 `json:"percentage"`
 }
 
 func newMemoryCollector() *memoryCollector {

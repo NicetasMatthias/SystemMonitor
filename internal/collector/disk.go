@@ -19,52 +19,45 @@ type diskCollector struct {
 }
 
 type DiskExport struct {
-	MountPoints []MountpointStat
-	Devices     map[string]*DeviceStat
+	MountPoints []MountpointStat       `json:"mount_points"`
+	Devices     map[string]*DeviceStat `json:"devices"`
 }
 
 type MountpointStat struct {
-	Mountpoint string
-	Device     string
-	FS         string
-	Capacity   MountpointCapacity
+	Mountpoint string             `json:"mountpoint"`
+	Device     string             `json:"device"`
+	FS         string             `json:"fs"`
+	Capacity   MountpointCapacity `json:"capacity"`
 }
 
 type MountpointCapacity struct {
-	Valid       bool
-	UsedBytes   uint64
-	TotalBytes  uint64
-	UsedPercent float64
+	Valid       bool    `json:"valid"`
+	UsedBytes   uint64  `json:"used_bytes"`
+	TotalBytes  uint64  `json:"total_bytes"`
+	UsedPercent float64 `json:"used_percent"`
 }
 
 type DeviceStat struct {
-	History    []DeviceSample
+	History    []DeviceSample `json:"history"`
 	lastIOData DeviceIOData
 }
 
 type DeviceIOData struct {
-	Valid      bool
-	Timestamp  time.Time
-	ReadBytes  uint64
-	WriteBytes uint64
-	ReadCount  uint64
-	WriteCount uint64
+	Valid      bool      `json:"valid"`
+	Timestamp  time.Time `json:"timestamp"`
+	ReadBytes  uint64    `json:"read_bytes"`
+	WriteBytes uint64    `json:"write_bytes"`
+	ReadCount  uint64    `json:"read_count"`
+	WriteCount uint64    `json:"write_count"`
 }
 
 type DeviceSample struct {
-	Valid           bool
-	Timestamp       time.Time
-	ReadThroughput  float64
-	WriteThroughput float64
-	ReadIOPS        float64
-	WriteIOPS       float64
-}
-
-type DiskStatus struct {
-	Valid       bool
-	Used        float64
-	Total       float64
-	UsedPercent float64
+	Valid           bool      `json:"valid"`
+	Timestamp       time.Time `json:"timestamp"`
+	ReadThroughput  float64   `json:"read_throughput"`
+	WriteThroughput float64   `json:"write_throughput"`
+	ReadIOPS        float64   `json:"read_iops"`
+	WriteIOPS       float64   `json:"write_iops"`
 }
 
 func collectMountpointCapacity(mountpoint string) MountpointCapacity {
@@ -171,6 +164,9 @@ func newDiskCollector() *diskCollector {
 	return &diskCollector{
 		interval:       time.Second * 2,
 		maxHistorySize: 50,
+		stat: DiskExport{
+			Devices: make(map[string]*DeviceStat),
+		},
 	}
 }
 

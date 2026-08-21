@@ -17,38 +17,38 @@ type cpuCollector struct {
 	mx             sync.RWMutex
 }
 type CPUExport struct {
-	History []CPUSample
+	History []CPUSample `json:"history"`
 }
 
 type CPUSample struct {
-	Timestamp time.Time
-	Data      CPUData
+	Timestamp time.Time `json:"timestamp"`
+	Data      CPUData   `json:"data"`
 }
 
 type CPUData struct {
-	Usage CPUUsage
-	Cores CoresStat
-	Load  LoadAverage
+	Usage CPUUsage    `json:"usage"`
+	Cores CoresStat   `json:"cores"`
+	Load  LoadAverage `json:"load"`
 }
 
 type CPUUsage struct {
-	Valid bool
-	Data  float64
+	Valid bool    `json:"valid"`
+	Data  float64 `json:"data"`
 }
 
 type CoreStat struct {
-	ID    int
-	Usage float64
+	ID    int     `json:"id"`
+	Usage float64 `json:"usage"`
 }
 
 type CoresStat struct {
-	Valid bool
-	Data  []CoreStat
+	Valid bool       `json:"valid"`
+	Data  []CoreStat `json:"data"`
 }
 
 type LoadAverage struct {
-	Valid bool
-	Data  load.AvgStat
+	Valid bool         `json:"valid"`
+	Data  load.AvgStat `json:"data"`
 }
 
 func collectCPUSample() CPUSample {

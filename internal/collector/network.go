@@ -19,7 +19,7 @@ type networkCollector struct {
 }
 
 type NetworkExport struct {
-	Stats map[string]NetworkStatus
+	Stats map[string]NetworkStatus `json:"stats"`
 }
 
 type NetworkTarget struct {
@@ -30,9 +30,9 @@ type NetworkTarget struct {
 }
 
 type NetworkStatus struct {
-	Reachable bool
-	Latency   time.Duration
-	LastCheck time.Time
+	Reachable bool          `json:"reachable"`
+	Latency   time.Duration `json:"latency"`
+	LastCheck time.Time     `json:"last_check"`
 }
 
 func collectNetworkStatus(target NetworkTarget) NetworkStatus {
@@ -66,6 +66,9 @@ func collectNetworkStatus(target NetworkTarget) NetworkStatus {
 func newNetworkCollector(netTargets []NetworkTarget) *networkCollector {
 	return &networkCollector{
 		targets: netTargets,
+		state: NetworkExport{
+			Stats: make(map[string]NetworkStatus),
+		},
 	}
 }
 

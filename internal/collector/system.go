@@ -17,28 +17,28 @@ type systemCollector struct {
 }
 
 type SystemExport struct {
-	Host     HostInfo
-	Activity ActivityInfo
+	Host     HostInfo     `json:"host"`
+	Activity ActivityInfo `json:"activity"`
 }
 
 type HostInfo struct {
-	Hostname        string
-	OS              string
-	Platform        string
-	PlatformFamily  string
-	PlatformVersion string
-	KernelVersion   string
-	Architecture    string
+	Hostname        string `json:"hostname"`
+	OS              string `json:"os"`
+	Platform        string `json:"platform"`
+	PlatformFamily  string `json:"platform_family"`
+	PlatformVersion string `json:"platform_version"`
+	KernelVersion   string `json:"kernel_version"`
+	Architecture    string `json:"architecture"`
 
-	BootTime time.Time
+	BootTime time.Time `json:"boot_time"`
 
-	LogicalCPUs   int
-	PhysicalCores int
+	LogicalCPUs   int `json:"logical_cp_us"`
+	PhysicalCores int `json:"physical_cores"`
 }
 
 type ActivityInfo struct {
-	ProcessCount uint64
-	SessionCount int
+	ProcessCount uint64 `json:"process_count"`
+	SessionCount int    `json:"session_count"`
 }
 
 func collectHostInfo() HostInfo {
@@ -95,6 +95,7 @@ func collectActivityInfo() ActivityInfo {
 
 func newSystemCollector() *systemCollector {
 	return &systemCollector{
+		interval: time.Second * 10,
 		state: SystemExport{
 			Host: collectHostInfo(),
 		},
