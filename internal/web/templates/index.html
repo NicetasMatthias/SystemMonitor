@@ -1,42 +1,199 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>System Monitor</title>
+
     <link rel="stylesheet" href="./static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <div class="container">
-        <h1>System Monitor</h1>
 
-        <div class="stats-container">
-            <div class="card">
-                <h2>CPU Usage</h2>
-                <canvas id="cpuChart"></canvas>
+        <header class="page-header">
+            <div>
+                <h1>System Monitor</h1>
+                <p class="subtitle">Real-time system metrics</p>
+            </div>
+
+            <div class="refresh-indicator">
+                <span id="connectionStatus" class="status-dot"></span>
+                <span id="lastUpdate">Waiting for data...</span>
+            </div>
+        </header>
+
+        <!-- System information -->
+        <section class="section">
+            <div class="section-title">
+                <h2>System</h2>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <span class="info-label">Hostname</span>
+                    <span id="hostname" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Operating System</span>
+                    <span id="os" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Platform</span>
+                    <span id="platform" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Architecture</span>
+                    <span id="architecture" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Kernel</span>
+                    <span id="kernelVersion" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">CPU</span>
+                    <span id="cpuCount" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Boot Time</span>
+                    <span id="bootTime" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Uptime</span>
+                    <span id="uptime" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Processes</span>
+                    <span id="processCount" class="info-value">—</span>
+                </div>
+
+                <div class="info-card">
+                    <span class="info-label">Sessions</span>
+                    <span id="sessionCount" class="info-value">—</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- CPU -->
+        <section class="section">
+            <div class="section-title">
+                <h2>CPU</h2>
+            </div>
+
+            <div class="charts-grid">
+                <div class="card chart-card">
+                    <h3>Total CPU Usage</h3>
+                    <div class="chart-container">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <h3>Load Average</h3>
+                    <div class="chart-container">
+                        <canvas id="loadChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
-                <h2>Memory Usage</h2>
-                <canvas id="memoryChart"></canvas>
-            </div>
-        </div>
+                <div class="card-header">
+                    <h3>Per-core Usage</h3>
+                    <span id="coreCount" class="badge">—</span>
+                </div>
 
-        <div class="stats-container">
+                <div id="coreUsage" class="core-grid"></div>
+            </div>
+        </section>
+
+        <!-- Memory -->
+        <section class="section">
+            <div class="section-title">
+                <h2>Memory</h2>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">Used</span>
+                    <strong id="memoryUsed">—</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Available</span>
+                    <strong id="memoryAvailable">—</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Total</span>
+                    <strong id="memoryTotal">—</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Usage</span>
+                    <strong id="memoryPercentage">—</strong>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Memory Usage</h3>
+
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Disk -->
+        <section class="section">
+            <div class="section-title">
+                <h2>Disk</h2>
+            </div>
+
             <div class="card">
-                <h2>Disk Status</h2>
+                <div class="card-header">
+                    <h3>Mount Points</h3>
+                    <span id="mountPointCount" class="badge">0</span>
+                </div>
+
                 <div id="diskStatus" class="disk-grid"></div>
             </div>
-        </div>
-        <div class="stats-container">
+
             <div class="card">
-                <h2>Network Status</h2>
+                <div class="card-header">
+                    <h3>Disk I/O</h3>
+                </div>
+
+                <div id="diskDevices" class="device-grid"></div>
+            </div>
+        </section>
+
+        <!-- Network -->
+        <section class="section">
+            <div class="section-title">
+                <h2>Network</h2>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Connectivity</h3>
+                    <span id="networkTargetCount" class="badge">0</span>
+                </div>
+
                 <div id="networkStatus" class="network-grid"></div>
             </div>
-        </div>
+        </section>
+
     </div>
 
     <script src="./static/js/app.js"></script>

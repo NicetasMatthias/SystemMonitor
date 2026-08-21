@@ -72,9 +72,22 @@ func (s *Server) routes() {
 		),
 	)
 
-	s.router.HandleFunc("/", s.handleIndex())
+	s.router.HandleFunc("/", s.handleIndex()).Methods(http.MethodGet)
 
-	s.router.HandleFunc("/api/stats", s.handleApiStats())
+	apiStats := s.router.PathPrefix("/api/stats").Subrouter()
+
+	apiStats.HandleFunc("", s.handleApiStats()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/", s.handleApiStats()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/cpu/", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/disk", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/disk/", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/memory", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/memory/", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/network", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
+	apiStats.HandleFunc("/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
 }
 
 func (s *Server) handleIndex() http.HandlerFunc {
@@ -87,7 +100,72 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 func (s *Server) handleApiStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetStats()
+		stats := s.collector.Get()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *Server) handleApiStatsCPU() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats := s.collector.GetCPU()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *Server) handleApiStatsDisk() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats := s.collector.GetDisk()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *Server) handleApiStatsMemory() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats := s.collector.GetMemory()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats := s.collector.GetNetwork()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := json.NewEncoder(w).Encode(stats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *Server) handleApiStatsSystem() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stats := s.collector.GetSystem()
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")

@@ -2,84 +2,96 @@ package collector
 
 import (
 	"context"
-	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
 )
 
-type ExportStats struct {
-	System       []SystemStats
-	NetworkStats map[string]NetworkStatus
-	DiskStats    map[string]DiskStatus
-}
+// type ExportStats struct {
+// 	System       []SystemStats_OLD
+// 	NetworkStats map[string]NetworkStatus
+// 	DiskStats    map[string]DiskStatus
+// }
 
-type SystemStats struct {
-	Timestamp   time.Time
-	CPUUsage    float64
-	MemoryUsed  uint64
-	MemoryTotal uint64
-}
-
-type NetworkTarget struct {
-	Name     string
-	Address  string
-	Interval time.Duration
-	Timeout  time.Duration
-}
+// type SystemStats_OLD struct {
+// 	Timestamp   time.Time
+// 	CPUUsage    float64
+// 	MemoryUsed  uint64
+// 	MemoryTotal uint64
+// }
 
 type Collector struct {
-	mu               sync.RWMutex
-	systemStats      []SystemStats
-	maxHistory       int
-	networkStats     map[string]NetworkStatus
-	targets          []NetworkTarget
-	diskPaths        []string
-	diskStat         map[string]DiskStatus
-	diskCheckTimeout time.Duration
-	ctx              context.Context
-	cancel           context.CancelFunc
-	wg               sync.WaitGroup
+	// mu               sync.RWMutex
+	// systemStats      []SystemStats_OLD
+	// maxHistory       int
+	// networkStats     map[string]NetworkStatus
+	// targets          []NetworkTarget
+	// diskPaths        []string
+	// diskStat         map[string]DiskStatus
+	// diskCheckTimeout time.Duration
+	cpu     *cpuCollector
+	disk    *diskCollector
+	memory  *memoryCollector
+	network *networkCollector
+	system  *systemCollector
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+}
+
+type CollectorExport struct {
+	CPU     CPUExport
+	Disk    DiskExport
+	Memory  MemoryExport
+	Network NetworkExport
+	System  SystemExport
 }
 
 func New(maxHistory int, targets []NetworkTarget, diskPaths []string, diskCheckInterval time.Duration) *Collector {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Collector{
-		systemStats:      make([]SystemStats, 0, maxHistory),
-		maxHistory:       maxHistory,
-		networkStats:     make(map[string]NetworkStatus),
-		diskStat:         make(map[string]DiskStatus),
-		diskCheckTimeout: diskCheckInterval,
-		targets:          targets,
-		diskPaths:        diskPaths,
-		ctx:              ctx,
-		cancel:           cancel,
+		cpu:     newCPUCollector(),
+		disk:    newDiskCollector(),
+		memory:  newMemoryCollector(),
+		network: newNetworkCollector(targets),
+		system:  newSystemCollector(),
+
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
 func (c *Collector) Start(interval time.Duration) {
+
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		c.collectLoop(interval)
+		c.cpu.Run(c.ctx)
 	}()
 
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		c.diskCheckLoop()
+		c.disk.Run(c.ctx)
 	}()
 
-	for _, target := range c.targets {
-		c.wg.Add(1)
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.memory.Run(c.ctx)
+	}()
 
-		go func() {
-			defer c.wg.Done()
-			c.networkCheckLoop(target)
-		}()
-	}
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.network.Run(c.ctx)
+	}()
+
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		c.system.Run(c.ctx)
+	}()
 
 }
 
@@ -88,76 +100,32 @@ func (c *Collector) Stop() {
 	c.wg.Wait()
 }
 
-func (c *Collector) GetStats() ExportStats {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	result := ExportStats{
-		System:       make([]SystemStats, len(c.systemStats)),
-		NetworkStats: make(map[string]NetworkStatus, len(c.networkStats)),
-		DiskStats:    make(map[string]DiskStatus, len(c.diskStat)),
-	}
-
-	copy(result.System, c.systemStats)
-
-	for name, stat := range c.networkStats {
-		result.NetworkStats[name] = stat
-	}
-
-	for path, stat := range c.diskStat {
-		result.DiskStats[path] = stat
-	}
-
-	return result
-}
-
-func (c *Collector) collectLoop(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	c.collect()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case <-ticker.C:
-			c.collect()
-		}
+func (c *Collector) Get() CollectorExport {
+	return CollectorExport{
+		CPU:     c.cpu.Get(),
+		Disk:    c.disk.Get(),
+		Memory:  c.memory.Get(),
+		Network: c.network.Get(),
+		System:  c.system.Get(),
 	}
 }
 
-func (c *Collector) collect() {
+func (c *Collector) GetCPU() CPUExport {
+	return c.cpu.Get()
+}
 
-	//=== TODO: expand statistic for each cpu
-	cpuPercent, err := cpu.Percent(0, false)
-	if err != nil {
-		slog.Warn("Failed to get cpu data", slog.Any("error", err))
-		//=== TODO: metric invalidation
-	}
-	cpuUsage := 0.0
-	if len(cpuPercent) > 0 {
-		cpuUsage = cpuPercent[0]
-	}
+func (c *Collector) GetDisk() DiskExport {
+	return c.disk.Get()
+}
 
-	memStat, err := mem.VirtualMemory()
-	if err != nil {
-		slog.Warn("Failed to get virtual memory data", slog.Any("error", err))
-		//=== TODO: metric invalidation
-	}
+func (c *Collector) GetMemory() MemoryExport {
+	return c.memory.Get()
+}
 
-	stats := SystemStats{
-		Timestamp:   time.Now(),
-		CPUUsage:    cpuUsage,
-		MemoryUsed:  memStat.Used,
-		MemoryTotal: memStat.Total,
-	}
+func (c *Collector) GetNetwork() NetworkExport {
+	return c.network.Get()
+}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.systemStats = append(c.systemStats, stats)
-	if len(c.systemStats) > c.maxHistory {
-		c.systemStats = c.systemStats[1:]
-	}
+func (c *Collector) GetSystem() SystemExport {
+	return c.system.Get()
 }
