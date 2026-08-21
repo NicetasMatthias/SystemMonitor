@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -10,14 +11,14 @@ import (
 )
 
 type diskCollector struct {
-	stat DiskStats
+	stat DiskExport
 
 	maxHistorySize int
 	interval       time.Duration
 	mx             sync.RWMutex
 }
 
-type DiskStats struct {
+type DiskExport struct {
 	MountPoints []MountpointStat
 	Devices     map[string]*DeviceStat
 }
@@ -104,7 +105,6 @@ func collectMountpointStats() []MountpointStat {
 }
 
 func (c *diskCollector) addDeviceSample(device string, data DeviceIOData) {
-	// === FIXME: WIP
 	stat, ok := c.stat.Devices[device]
 
 	if !ok {
@@ -200,48 +200,24 @@ func (c *diskCollector) Run(ctx context.Context) {
 	}
 }
 
-func (c *diskCollector) Get() DiskStats {
+func (exp *DiskExport) DeepCopy() DiskExport {
 
-	return DiskStats{} //=== FIXME: WIP
+	devs := make(map[string]*DeviceStat)
+	for devName, devStat := range exp.Devices {
+		devs[devName] = &DeviceStat{
+			History:    slices.Clone(devStat.History),
+			lastIOData: devStat.lastIOData,
+		}
+	}
+
+	return DiskExport{
+		MountPoints: slices.Clone(exp.MountPoints),
+		Devices:     devs,
+	}
 }
 
-func (c *Collector) diskCheckLoop() {
-	//=== FIXME: удалить
-	// ticker := time.NewTicker(c.diskCheckTimeout)
-	// defer ticker.Stop()
-
-	// for {
-	// 	select {
-	// 	case <-c.ctx.Done():
-	// 		return
-	// 	case <-ticker.C:
-	// 		tmpMap := make(map[string]DiskStatus)
-	// 		for _, path := range c.diskPaths {
-	// 			tmpMap[path] = checkDisk(path)
-	// 		}
-	// 		c.mu.Lock()
-	// 		for _, path := range c.diskPaths {
-	// 			c.diskStat[path] = tmpMap[path]
-	// 		}
-	// 		c.mu.Unlock()
-	// 	}
-	// }
+func (c *diskCollector) Get() DiskExport {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.stat.DeepCopy()
 }
-
-// func checkDisk(diskPath string) DiskStatus {
-// 	diskStat, err := disk.Usage(diskPath)
-// 	if err != nil {
-// 		slog.Warn("Failed to get disk",
-// 			slog.Any("disk path", diskPath),
-// 			slog.Any("error", err))
-// 		return DiskStatus{
-// 			Valid: true,
-// 		}
-// 	}
-// 	const gb = 1024 * 1024 * 1024
-// 	return DiskStatus{
-// 		Valid: true,
-// 		Used:  float64(diskStat.Used) / float64(gb),
-// 		Total: float64(diskStat.Total) / float64(gb),
-// 	}
-// }

@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -9,11 +10,15 @@ import (
 )
 
 type memoryCollector struct {
-	history []MemorySample
+	state MemoryExport
 
 	maxHistorySize int
 	interval       time.Duration
-	mx             sync.Mutex
+	mx             sync.RWMutex
+}
+
+type MemoryExport struct {
+	History []MemorySample
 }
 
 type MemorySample struct {
@@ -55,16 +60,15 @@ func collectMemorySample() MemorySample {
 }
 
 func (c *memoryCollector) collect() {
-	//=== FIXME: WIP
 	sample := collectMemorySample()
 
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
-	if len(c.history) >= c.maxHistorySize {
-		c.history = c.history[1:]
+	if len(c.state.History) >= c.maxHistorySize {
+		c.state.History = c.state.History[1:]
 	}
-	c.history = append(c.history, sample)
+	c.state.History = append(c.state.History, sample)
 }
 
 func (c *memoryCollector) Run(ctx context.Context) {
@@ -80,4 +84,16 @@ func (c *memoryCollector) Run(ctx context.Context) {
 			c.collect()
 		}
 	}
+}
+
+func (exp *MemoryExport) DeepCopy() MemoryExport {
+	return MemoryExport{
+		History: slices.Clone(exp.History),
+	}
+}
+
+func (c *memoryCollector) Get() MemoryExport {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.state.DeepCopy()
 }

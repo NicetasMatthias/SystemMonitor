@@ -10,11 +10,14 @@ import (
 )
 
 type cpuCollector struct {
-	history []CPUSample
+	state CPUExport
 
 	interval       time.Duration
 	maxHistorySize int
 	mx             sync.RWMutex
+}
+type CPUExport struct {
+	History []CPUSample
 }
 
 type CPUSample struct {
@@ -129,11 +132,11 @@ func (c *cpuCollector) collect() {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
-	if len(c.history) >= c.maxHistorySize {
-		c.history = c.history[1:]
+	if len(c.state.History) >= c.maxHistorySize {
+		c.state.History = c.state.History[1:]
 	}
 
-	c.history = append(c.history, sample)
+	c.state.History = append(c.state.History, sample)
 }
 
 func (c *cpuCollector) Run(ctx context.Context) {
@@ -159,12 +162,18 @@ func cloneCPUSample(sample CPUSample) CPUSample {
 	return sample
 }
 
-func (c *cpuCollector) Get() []CPUSample {
-	c.mx.RLock()
-	defer c.mx.RUnlock()
-	history := make([]CPUSample, len(c.history))
-	for i, sample := range c.history {
+func (exp *CPUExport) DeepCopy() CPUExport {
+	history := make([]CPUSample, len(exp.History))
+	for i, sample := range exp.History {
 		history[i] = cloneCPUSample(sample)
 	}
-	return history
+	return CPUExport{
+		History: history,
+	}
+}
+
+func (c *cpuCollector) Get() CPUExport {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.state.DeepCopy()
 }

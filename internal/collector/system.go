@@ -10,13 +10,13 @@ import (
 )
 
 type systemCollector struct {
-	state SystemStats
+	state SystemExport
 
 	interval time.Duration
 	mx       sync.RWMutex
 }
 
-type SystemStats struct {
+type SystemExport struct {
 	Host     HostInfo
 	Activity ActivityInfo
 }
@@ -95,7 +95,7 @@ func collectActivityInfo() ActivityInfo {
 
 func newSystemCollector() *systemCollector {
 	return &systemCollector{
-		state: SystemStats{
+		state: SystemExport{
 			Host: collectHostInfo(),
 		},
 	}
@@ -124,9 +124,13 @@ func (c *systemCollector) Run(ctx context.Context) {
 	}
 }
 
-func (c *systemCollector) Get() SystemStats {
+func (exp *SystemExport) DeepCopy() SystemExport {
+
+	return *exp
+}
+
+func (c *systemCollector) Get() SystemExport {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
-	state := c.state
-	return state
+	return c.state.DeepCopy()
 }

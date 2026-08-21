@@ -87,7 +87,7 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 func (s *Server) handleApiStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetStats()
+		stats := s.collector.Get()
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
