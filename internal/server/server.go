@@ -45,6 +45,10 @@ type Server struct {
 	srv       *http.Server
 }
 
+type apiError struct {
+	Error string `json:"error"`
+}
+
 func New(collector *collector.Collector) *Server {
 	s := &Server{
 		router:    mux.NewRouter(),
@@ -76,6 +80,11 @@ func (s *Server) routes() {
 
 	apiStats := s.router.PathPrefix("/api/stats").Subrouter()
 
+	apiStats.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Allow", http.MethodGet)
+		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
+
 	apiStats.HandleFunc("", s.handleApiStats()).Methods(http.MethodGet)
 	apiStats.HandleFunc("/", s.handleApiStats()).Methods(http.MethodGet)
 	apiStats.HandleFunc("/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
@@ -90,6 +99,38 @@ func (s *Server) routes() {
 	apiStats.HandleFunc("/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
 }
 
+func writeAPIError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(status)
+
+	err := json.NewEncoder(w).Encode(apiError{
+		Error: message,
+	})
+
+	if err != nil {
+		slog.Error("failed to encode error to response", slog.Any("encode error", err), slog.Any("response error", message))
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		slog.Error("failed to encode response", slog.Any("error", err))
+		writeAPIError(w, http.StatusInternalServerError, "failed to encode response")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(status)
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("failed to write data to response", slog.Any("error", err))
+
+	}
+}
+
 func (s *Server) handleIndex() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := s.templates.ExecuteTemplate(w, "index.html", nil); err != nil {
@@ -100,79 +141,37 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 func (s *Server) handleApiStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.Get()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.Get())
 	}
 }
 
 func (s *Server) handleApiStatsCPU() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetCPU()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetCPU())
 	}
 }
 
 func (s *Server) handleApiStatsDisk() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetDisk()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetDisk())
 	}
 }
 
 func (s *Server) handleApiStatsMemory() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetMemory()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetMemory())
 	}
 }
 
 func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetNetwork()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetNetwork())
 	}
 }
 
 func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetSystem()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetSystem())
 	}
 }
 
