@@ -25,6 +25,7 @@ type NetworkExport struct {
 type NetworkTarget struct {
 	Name     string
 	Address  string
+	Protocol string
 	Interval time.Duration
 	Timeout  time.Duration
 }
@@ -41,7 +42,8 @@ func collectNetworkStatus(target NetworkTarget) NetworkStatus {
 	defer cancel()
 
 	var dialer net.Dialer
-	conn, err := dialer.DialContext(ctx, "tcp", target.Address)
+	//=== TODO: implement proper check for UDP
+	conn, err := dialer.DialContext(ctx, target.Protocol, target.Address)
 
 	if err != nil {
 		return NetworkStatus{

@@ -20,19 +20,6 @@ var allowedProtocols = map[string]struct{}{
 	"udp": {},
 }
 
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	dur, err := time.ParseDuration(s)
-	if err != nil {
-		return err
-	}
-	d.Duration = dur
-	return nil
-}
-
 type NetworkTarget struct {
 	Name     string   `json:"name"`
 	Address  string   `json:"address"`
@@ -48,6 +35,30 @@ type Config struct {
 	MaxHistorySize         int             `json:"max_history_size"`
 	NetworkTargets         []NetworkTarget `json:"network_targets"`
 	DiskPaths              []string        `json:"disk_paths"`
+}
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	d.Duration = dur
+	return nil
+}
+
+func (nt *NetworkTarget) UnmarshalJSON(b []byte) error {
+
+	type alias NetworkTarget
+
+	//=== TODO: implement proper default
+	*nt = NetworkTarget{
+		Protocol: "tcp",
+	}
+	return json.Unmarshal(b, (*alias)(nt))
 }
 
 func (c Config) Validate() error {
