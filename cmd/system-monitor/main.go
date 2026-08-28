@@ -62,6 +62,7 @@ func run() {
 		targets = append(targets, collector.NetworkTarget{
 			Name:     t.Name,
 			Address:  t.Address,
+			Protocol: t.Protocol,
 			Interval: t.Interval.Duration,
 			Timeout:  timeout,
 		})
