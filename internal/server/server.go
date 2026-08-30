@@ -78,6 +78,13 @@ func (s *Server) routes() {
 		panic(err)
 	}
 
+	//=== TODO: improve processing MethodNotAllowed
+
+	s.router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Allow", http.MethodGet)
+		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
+
 	s.router.PathPrefix("/static/").Handler(
 		http.StripPrefix(
 			"/static/",
@@ -87,25 +94,18 @@ func (s *Server) routes() {
 
 	s.router.HandleFunc("/", s.handleIndex()).Methods(http.MethodGet)
 
-	apiStats := s.router.PathPrefix("/api/stats").Subrouter()
-
-	apiStats.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Allow", http.MethodGet)
-		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
-	})
-
-	apiStats.HandleFunc("", s.handleApiStats()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/", s.handleApiStats()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/cpu/", s.handleApiStatsCPU()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/disk", s.handleApiStatsDisk()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/disk/", s.handleApiStatsDisk()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/memory", s.handleApiStatsMemory()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/memory/", s.handleApiStatsMemory()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/network", s.handleApiStatsNetwork()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats", s.handleApiStats()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/", s.handleApiStats()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/cpu/", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/disk", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/disk/", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/memory", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/memory/", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/network", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
 }
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {
