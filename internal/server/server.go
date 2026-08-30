@@ -15,6 +15,26 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type statsCollector interface {
+	Get() collector.CollectorExport
+	GetCPU() collector.CPUExport
+	GetDisk() collector.DiskExport
+	GetMemory() collector.MemoryExport
+	GetNetwork() collector.NetworkExport
+	GetSystem() collector.SystemExport
+}
+
+type Server struct {
+	router    *mux.Router
+	collector statsCollector
+	templates *template.Template
+	srv       *http.Server
+}
+
+type apiError struct {
+	Error string `json:"error"`
+}
+
 func init() {
 	addMimeExtType(".css", "text/css")
 	addMimeExtType(".js", "application/javascript")
@@ -38,21 +58,10 @@ func addMimeExtType(ext, typeStr string) {
 	}
 }
 
-type Server struct {
-	router    *mux.Router
-	collector *collector.Collector
-	templates *template.Template
-	srv       *http.Server
-}
-
-type apiError struct {
-	Error string `json:"error"`
-}
-
-func New(collector *collector.Collector) *Server {
+func New(c statsCollector) *Server {
 	s := &Server{
 		router:    mux.NewRouter(),
-		collector: collector,
+		collector: c,
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
