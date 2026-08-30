@@ -15,6 +15,26 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type statsCollector interface {
+	Get() collector.CollectorExport
+	GetCPU() collector.CPUExport
+	GetDisk() collector.DiskExport
+	GetMemory() collector.MemoryExport
+	GetNetwork() collector.NetworkExport
+	GetSystem() collector.SystemExport
+}
+
+type Server struct {
+	router    *mux.Router
+	collector statsCollector
+	templates *template.Template
+	srv       *http.Server
+}
+
+type apiError struct {
+	Error string `json:"error"`
+}
+
 func init() {
 	addMimeExtType(".css", "text/css")
 	addMimeExtType(".js", "application/javascript")
@@ -38,17 +58,10 @@ func addMimeExtType(ext, typeStr string) {
 	}
 }
 
-type Server struct {
-	router    *mux.Router
-	collector *collector.Collector
-	templates *template.Template
-	srv       *http.Server
-}
-
-func New(collector *collector.Collector) *Server {
+func New(c statsCollector) *Server {
 	s := &Server{
 		router:    mux.NewRouter(),
-		collector: collector,
+		collector: c,
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
@@ -65,6 +78,13 @@ func (s *Server) routes() {
 		panic(err)
 	}
 
+	//=== TODO: improve processing MethodNotAllowed
+
+	s.router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Allow", http.MethodGet)
+		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
+	})
+
 	s.router.PathPrefix("/static/").Handler(
 		http.StripPrefix(
 			"/static/",
@@ -74,20 +94,50 @@ func (s *Server) routes() {
 
 	s.router.HandleFunc("/", s.handleIndex()).Methods(http.MethodGet)
 
-	apiStats := s.router.PathPrefix("/api/stats").Subrouter()
+	s.router.HandleFunc("/api/stats", s.handleApiStats()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/", s.handleApiStats()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/cpu/", s.handleApiStatsCPU()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/disk", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/disk/", s.handleApiStatsDisk()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/memory", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/memory/", s.handleApiStatsMemory()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/network", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/stats/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
+}
 
-	apiStats.HandleFunc("", s.handleApiStats()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/", s.handleApiStats()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/cpu", s.handleApiStatsCPU()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/cpu/", s.handleApiStatsCPU()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/disk", s.handleApiStatsDisk()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/disk/", s.handleApiStatsDisk()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/memory", s.handleApiStatsMemory()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/memory/", s.handleApiStatsMemory()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/network", s.handleApiStatsNetwork()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
-	apiStats.HandleFunc("/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
+func writeAPIError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(status)
+
+	err := json.NewEncoder(w).Encode(apiError{
+		Error: message,
+	})
+
+	if err != nil {
+		slog.Error("failed to encode error to response", slog.Any("encode error", err), slog.Any("response error", message))
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		slog.Error("failed to encode response", slog.Any("error", err))
+		writeAPIError(w, http.StatusInternalServerError, "failed to encode response")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(status)
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("failed to write data to response", slog.Any("error", err))
+
+	}
 }
 
 func (s *Server) handleIndex() http.HandlerFunc {
@@ -100,79 +150,37 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 func (s *Server) handleApiStats() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.Get()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.Get())
 	}
 }
 
 func (s *Server) handleApiStatsCPU() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetCPU()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetCPU())
 	}
 }
 
 func (s *Server) handleApiStatsDisk() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetDisk()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetDisk())
 	}
 }
 
 func (s *Server) handleApiStatsMemory() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetMemory()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetMemory())
 	}
 }
 
 func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetNetwork()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetNetwork())
 	}
 }
 
 func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stats := s.collector.GetSystem()
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		if err := json.NewEncoder(w).Encode(stats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		writeJSON(w, http.StatusOK, s.collector.GetSystem())
 	}
 }
 
