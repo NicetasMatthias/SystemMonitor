@@ -1,21 +1,13 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/NicetasMatthias/SystemMonitor/internal/info"
 	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
-	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
 func main() {
@@ -51,61 +43,61 @@ func run() {
 		panic(err)
 	}
 
-	var targets []collector.NetworkTarget
+	// var targets []collector.NetworkTarget
 
-	for _, t := range cfg.NetworkTargets {
-		timeout := t.Timeout.Duration
-		if timeout == 0 {
-			timeout = 5 * time.Second
-		}
+	// for _, t := range cfg.NetworkTargets {
+	// 	timeout := t.Timeout.Duration
+	// 	if timeout == 0 {
+	// 		timeout = 5 * time.Second
+	// 	}
 
-		targets = append(targets, collector.NetworkTarget{
-			Name:     t.Name,
-			Address:  t.Address,
-			Protocol: t.Protocol,
-			Interval: t.Interval.Duration,
-			Timeout:  timeout,
-		})
-	}
+	// 	targets = append(targets, collector.NetworkTarget{
+	// 		Name:     t.Name,
+	// 		Address:  t.Address,
+	// 		Protocol: t.Protocol,
+	// 		Interval: t.Interval.Duration,
+	// 		Timeout:  timeout,
+	// 	})
+	// }
 
-	col := collector.New(cfg.MaxHistorySize, targets, cfg.DiskPaths, cfg.DiskCollectInterval.Duration)
-	col.Start(cfg.NetworkCollectInterval.Duration)
+	// col := collector.New(cfg.MaxHistorySize, targets, cfg.DiskPaths, cfg.DiskCollectInterval.Duration)
+	// col.Start(cfg.NetworkCollectInterval.Duration)
 
-	srv := server.New(col)
+	// srv := server.New(col)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// sigChan := make(chan os.Signal, 1)
+	// signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-		slog.Info("Server staring",
-			slog.String("port", cfg.HTTPPort))
+	// go func() {
+	// 	slog.Info("Server staring",
+	// 		slog.String("port", cfg.HTTPPort))
 
-		if err := srv.Start(cfg.HTTPPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	// 	if err := srv.Start(cfg.HTTPPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
 
-			slog.Error("Server startup failed",
-				slog.Any("error", err))
-		}
-	}()
+	// 		slog.Error("Server startup failed",
+	// 			slog.Any("error", err))
+	// 	}
+	// }()
 
-	slog.Info("system-monitor started", slog.Any("version", info.Version))
+	// slog.Info("system-monitor started", slog.Any("version", info.Version))
 
-	<-sigChan
+	// <-sigChan
 
-	slog.Info("Shutting down gracefully...")
+	// slog.Info("Shutting down gracefully...")
 
-	shutdownCtx, cancel := context.WithTimeout(
-		context.Background(),
-		5*time.Second,
-	)
-	defer cancel()
+	// shutdownCtx, cancel := context.WithTimeout(
+	// 	context.Background(),
+	// 	5*time.Second,
+	// )
+	// defer cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("Server shutdown failed", slog.Any("error", err))
-	}
+	// if err := srv.Shutdown(shutdownCtx); err != nil {
+	// 	slog.Error("Server shutdown failed", slog.Any("error", err))
+	// }
 
-	col.Stop()
+	// col.Stop()
 
-	slog.Info("Shutdown complete")
+	// slog.Info("Shutdown complete")
 }
 
 func printVersion() {

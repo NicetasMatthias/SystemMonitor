@@ -29,6 +29,7 @@ type Server struct {
 	collector statsCollector
 	templates *template.Template
 	srv       *http.Server
+	port      string
 }
 
 type apiError struct {
@@ -58,24 +59,26 @@ func addMimeExtType(ext, typeStr string) {
 	}
 }
 
-func New(c statsCollector) *Server {
+func New(c statsCollector, port string) (*Server, error) {
 	s := &Server{
 		router:    mux.NewRouter(),
 		collector: c,
+		port:      port,
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
 
 	s.routes()
 
-	return s
+	return s, nil //=== TODO: найти где может быть ошибка
 }
 
-func (s *Server) routes() {
+func (s *Server) routes() error {
 
 	staticFS, err := fs.Sub(web.FS, "static")
 	if err != nil {
-		panic(err)
+		//=== TODO: log
+		return err
 	}
 
 	//=== TODO: improve processing MethodNotAllowed
