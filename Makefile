@@ -5,9 +5,9 @@ DATE ?= $(shell date -u +"%Y-%m-%d %H:%M:%S")
 INFO_PKG := github.com/NicetasMatthias/SystemMonitor/internal/info
 
 LDFLAGS := \
-	-X $(INFO_PKG).Version=$(VERSION) \
-	-X $(INFO_PKG).Commit=$(COMMIT) \
-	-X $(INFO_PKG).Date=$(DATE)
+	-X '$(INFO_PKG).Version=$(VERSION)' \
+	-X '$(INFO_PKG).Commit=$(COMMIT)' \
+	-X '$(INFO_PKG).Date=$(DATE)'
 
 ifeq ($(OS),Windows_NT)
     BINARY_NAME=system-monitor.exe
@@ -28,7 +28,7 @@ help:
 
 build: deps
 	@echo "Building..."
-	go build -ldflags "$(LDFLAGS)" -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
+	go build -ldflags="$(LDFLAGS)" -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo "Done! Binary: $(BINARY_DIR)/$(BINARY_NAME)"
 	
 run: deps

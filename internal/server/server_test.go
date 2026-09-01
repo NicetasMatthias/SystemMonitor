@@ -213,7 +213,10 @@ func TestServer_APIStatsGET(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := New(&testCollector{})
+			s, err := New(&testCollector{}, "80")
+			if err != nil {
+				t.Fatalf("failed to setup server: %v", err)
+			}
 
 			req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
 
@@ -267,7 +270,10 @@ func TestAPIStatsMethodNotAllowed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := New(&testCollector{})
+			s, err := New(&testCollector{}, "80")
+			if err != nil {
+				t.Fatalf("failed to setup server: %v", err)
+			}
 
 			req := httptest.NewRequest(tt.method, "/api/stats", nil)
 

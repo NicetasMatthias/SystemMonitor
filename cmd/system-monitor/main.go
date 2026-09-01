@@ -2,20 +2,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
+	"github.com/NicetasMatthias/SystemMonitor/internal/app"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/NicetasMatthias/SystemMonitor/internal/info"
 	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
-	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
 func main() {
@@ -41,7 +38,7 @@ func run() {
 	cfg, err := config.Load("config.json") //=== TODO: set proper config path
 
 	if err != nil {
-		slog.Error("Failed to load config",
+		slog.Error("failed to load config",
 			slog.Any("error", err))
 		panic(err)
 	}
@@ -51,61 +48,46 @@ func run() {
 		panic(err)
 	}
 
-	var targets []collector.NetworkTarget
-
-	for _, t := range cfg.NetworkTargets {
-		timeout := t.Timeout.Duration
-		if timeout == 0 {
-			timeout = 5 * time.Second
-		}
-
-		targets = append(targets, collector.NetworkTarget{
-			Name:     t.Name,
-			Address:  t.Address,
-			Protocol: t.Protocol,
-			Interval: t.Interval.Duration,
-			Timeout:  timeout,
-		})
+	application, err := app.New(*cfg)
+	if err != nil {
+		slog.Error("failed to setup application",
+			slog.Any("error", err))
+		panic(err)
 	}
 
-	col := collector.New(cfg.MaxHistorySize, targets, cfg.DiskPaths, cfg.DiskCollectInterval.Duration)
-	col.Start(cfg.NetworkCollectInterval.Duration)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
-	srv := server.New(col)
+	if err := application.Start(ctx); err != nil {
+		slog.Error("application failed to start",
+			slog.Any("error", err))
+		panic(err)
+	}
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	slog.Info("application started", slog.Any("version", info.Version))
 
-	go func() {
-		slog.Info("Server staring",
-			slog.String("port", cfg.HTTPPort))
-
-		if err := srv.Start(cfg.HTTPPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
-
-			slog.Error("Server startup failed",
-				slog.Any("error", err))
-		}
-	}()
-
-	slog.Info("system-monitor started", slog.Any("version", info.Version))
-
-	<-sigChan
+	if err := application.Wait(ctx); err != nil {
+		slog.Error("application failed",
+			slog.Any("error", err))
+		panic(err)
+	}
 
 	slog.Info("Shutting down gracefully...")
 
-	shutdownCtx, cancel := context.WithTimeout(
-		context.Background(),
-		5*time.Second,
-	)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := application.Shutdown(shutdownCtx); err != nil {
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		slog.Error("Server shutdown failed", slog.Any("error", err))
+		slog.Error("application shutdown failed", slog.Any("error", err))
+		panic(err)
+	} else {
+		slog.Info("Shutdown complete")
 	}
 
-	col.Stop()
-
-	slog.Info("Shutdown complete")
 }
 
 func printVersion() {

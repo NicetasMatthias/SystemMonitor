@@ -2,9 +2,11 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -67,8 +69,9 @@ func collectCPUUsage() CPUUsage {
 	usage, err := cpu.Percent(0, false)
 	if err != nil {
 
-		//=== TODO: log
-
+		slog.Warn("error collecting cpu usage",
+			slog.Any("error", err),
+		)
 		return CPUUsage{
 			Valid: false,
 		}
@@ -106,7 +109,9 @@ func collectCoresStat() CoresStat {
 func collectLoadAverage() LoadAverage {
 	avg, err := load.Avg()
 	if err != nil {
-		//=== TODO: log
+		slog.Warn("error collecting load average",
+			slog.Any("error", err),
+		)
 		return LoadAverage{
 			Valid: false,
 		}
@@ -118,11 +123,14 @@ func collectLoadAverage() LoadAverage {
 	}
 }
 
-func newCPUCollector() *cpuCollector {
-	return &cpuCollector{
+func newCPUCollector(cfg config.Config) (*cpuCollector, error) {
+
+	//=== TODO: get values from config
+	coll := &cpuCollector{
 		interval:       time.Second * 2,
 		maxHistorySize: 50,
 	}
+	return coll, nil //=== TODO: check possible errors
 }
 
 func (c *cpuCollector) collect() {

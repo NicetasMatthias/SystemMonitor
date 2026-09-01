@@ -2,41 +2,23 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"sync"
-	"time"
+
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 )
 
-// type ExportStats struct {
-// 	System       []SystemStats_OLD
-// 	NetworkStats map[string]NetworkStatus
-// 	DiskStats    map[string]DiskStatus
-// }
-
-// type SystemStats_OLD struct {
-// 	Timestamp   time.Time
-// 	CPUUsage    float64
-// 	MemoryUsed  uint64
-// 	MemoryTotal uint64
-// }
-
 type Collector struct {
-	// mu               sync.RWMutex
-	// systemStats      []SystemStats_OLD
-	// maxHistory       int
-	// networkStats     map[string]NetworkStatus
-	// targets          []NetworkTarget
-	// diskPaths        []string
-	// diskStat         map[string]DiskStatus
-	// diskCheckTimeout time.Duration
 	cpu     *cpuCollector
 	disk    *diskCollector
 	memory  *memoryCollector
 	network *networkCollector
 	system  *systemCollector
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	startOnce sync.Once
+	startErr  error
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
 }
 
 type CollectorExport struct {
@@ -47,57 +29,90 @@ type CollectorExport struct {
 	System  SystemExport
 }
 
-func New(maxHistory int, targets []NetworkTarget, diskPaths []string, diskCheckInterval time.Duration) *Collector {
-	ctx, cancel := context.WithCancel(context.Background())
+func New(cfg config.Config) (*Collector, error) {
+
+	cpuColl, cpuErr := newCPUCollector(cfg)
+	diskColl, diskErr := newDiskCollector(cfg)
+	memColl, memErr := newMemoryCollector(cfg)
+	netColl, netErr := newNetworkCollector(cfg)
+	sysColl, sysErr := newSystemCollector(cfg)
+
 	return &Collector{
-		cpu:     newCPUCollector(),
-		disk:    newDiskCollector(),
-		memory:  newMemoryCollector(),
-		network: newNetworkCollector(targets),
-		system:  newSystemCollector(),
+			cpu:     cpuColl,
+			disk:    diskColl,
+			memory:  memColl,
+			network: netColl,
+			system:  sysColl,
+		},
+		errors.Join(
+			cpuErr,
+			diskErr,
+			memErr,
+			netErr,
+			sysErr,
+		)
+}
 
-		ctx:    ctx,
-		cancel: cancel,
+func (c *Collector) Start(ctx context.Context) error {
+
+	c.startOnce.Do(func() {
+		ctx, c.cancel = context.WithCancel(ctx)
+
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.cpu.Run(ctx)
+		}()
+
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.disk.Run(ctx)
+		}()
+
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.memory.Run(ctx)
+		}()
+
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.network.Run(ctx)
+		}()
+
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.system.Run(ctx)
+		}()
+
+		//=== TODO: check Run`s via chan and set c.startErr
+	})
+
+	return c.startErr
+}
+
+func (c *Collector) Stop(ctx context.Context) error {
+	if c.cancel == nil {
+		return nil
 	}
-}
-
-func (c *Collector) Start(interval time.Duration) {
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.cpu.Run(c.ctx)
-	}()
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.disk.Run(c.ctx)
-	}()
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.memory.Run(c.ctx)
-	}()
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.network.Run(c.ctx)
-	}()
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.system.Run(c.ctx)
-	}()
-
-}
-
-func (c *Collector) Stop() {
 	c.cancel()
-	c.wg.Wait()
+
+	done := make(chan struct{})
+
+	go func() {
+		c.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (c *Collector) Get() CollectorExport {

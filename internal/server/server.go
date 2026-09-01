@@ -3,10 +3,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"time"
 
@@ -29,53 +31,73 @@ type Server struct {
 	collector statsCollector
 	templates *template.Template
 	srv       *http.Server
+	port      string
+
+	errCh chan error
 }
 
 type apiError struct {
 	Error string `json:"error"`
 }
 
-func init() {
-	addMimeExtType(".css", "text/css")
-	addMimeExtType(".js", "application/javascript")
-	addMimeExtType(".json", "application/json")
-	addMimeExtType(".png", "image/png")
-	addMimeExtType(".jpg", "image/jpeg")
-	addMimeExtType(".jpeg", "image/jpeg")
-	addMimeExtType(".gif", "image/gif")
-	addMimeExtType(".svg", "image/svg+xml")
-	addMimeExtType(".woff", "font/woff")
-	addMimeExtType(".woff2", "font/woff2")
-	addMimeExtType(".ttf", "font/ttf")
-}
-
-func addMimeExtType(ext, typeStr string) {
-	if err := mime.AddExtensionType(ext, typeStr); err != nil {
-		slog.Error("Failed to add mime extension type",
-			slog.Any("extension", ext),
-			slog.Any("mime type", typeStr),
-			slog.Any("error", err))
-	}
-}
-
-func New(c statsCollector) *Server {
+func New(c statsCollector, port string) (*Server, error) {
 	s := &Server{
 		router:    mux.NewRouter(),
 		collector: c,
+		port:      port,
+		errCh:     make(chan error, 1),
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
 
-	s.routes()
+	if err := s.routes(); err != nil {
+		return nil, err
+	}
 
-	return s
+	s.srv = &http.Server{
+		Handler:      s.router,
+		Addr:         ":" + port,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	return s, nil
 }
 
-func (s *Server) routes() {
+func (s *Server) Start() error {
+	slog.Info("server staring",
+		slog.String("port", s.port))
+
+	listener, err := net.Listen("tcp", s.srv.Addr)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+
+		if err := s.srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.errCh <- err
+		}
+	}()
+
+	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.srv.Shutdown(ctx)
+}
+
+func (s *Server) Errors() <-chan error {
+	return s.errCh
+}
+
+func (s *Server) routes() error {
 
 	staticFS, err := fs.Sub(web.FS, "static")
 	if err != nil {
-		panic(err)
+		slog.Error("failed to init embed filesystem",
+			slog.Any("error", err),
+		)
+		return err
 	}
 
 	//=== TODO: improve processing MethodNotAllowed
@@ -106,6 +128,8 @@ func (s *Server) routes() {
 	s.router.HandleFunc("/api/stats/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
+
+	return nil //=== TODO: сделать проверки где можно
 }
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {
@@ -184,16 +208,25 @@ func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 	}
 }
 
-func (s *Server) Start(port string) error {
-	s.srv = &http.Server{
-		Handler:      s.router,
-		Addr:         ":" + port,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-	return s.srv.ListenAndServe()
+func init() {
+	addMimeExtType(".css", "text/css")
+	addMimeExtType(".js", "application/javascript")
+	addMimeExtType(".json", "application/json")
+	addMimeExtType(".png", "image/png")
+	addMimeExtType(".jpg", "image/jpeg")
+	addMimeExtType(".jpeg", "image/jpeg")
+	addMimeExtType(".gif", "image/gif")
+	addMimeExtType(".svg", "image/svg+xml")
+	addMimeExtType(".woff", "font/woff")
+	addMimeExtType(".woff2", "font/woff2")
+	addMimeExtType(".ttf", "font/ttf")
 }
 
-func (s *Server) Shutdown(ctx context.Context) error {
-	return s.srv.Shutdown(ctx)
+func addMimeExtType(ext, typeStr string) {
+	if err := mime.AddExtensionType(ext, typeStr); err != nil {
+		slog.Error("Failed to add mime extension type",
+			slog.Any("extension", ext),
+			slog.Any("mime type", typeStr),
+			slog.Any("error", err))
+	}
 }
