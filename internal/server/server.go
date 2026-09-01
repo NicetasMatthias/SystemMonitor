@@ -32,6 +32,8 @@ type Server struct {
 	templates *template.Template
 	srv       *http.Server
 	port      string
+
+	errCh chan error
 }
 
 type apiError struct {
@@ -43,6 +45,7 @@ func New(c statsCollector, port string) (*Server, error) {
 		router:    mux.NewRouter(),
 		collector: c,
 		port:      port,
+		errCh:     make(chan error, 1),
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
@@ -61,7 +64,7 @@ func New(c statsCollector, port string) (*Server, error) {
 }
 
 func (s *Server) Start() error {
-	slog.Info("Server staring",
+	slog.Info("server staring",
 		slog.String("port", s.port))
 
 	listener, err := net.Listen("tcp", s.srv.Addr)
@@ -72,7 +75,7 @@ func (s *Server) Start() error {
 	go func() {
 
 		if err := s.srv.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			//==== TODO: log
+			s.errCh <- err
 		}
 	}()
 
@@ -83,11 +86,17 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
 }
 
+func (s *Server) Errors() <-chan error {
+	return s.errCh
+}
+
 func (s *Server) routes() error {
 
 	staticFS, err := fs.Sub(web.FS, "static")
 	if err != nil {
-		//=== TODO: log
+		slog.Error("failed to init embed filesystem",
+			slog.Any("error", err),
+		)
 		return err
 	}
 

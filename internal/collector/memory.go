@@ -2,10 +2,12 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
 
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
@@ -31,17 +33,22 @@ type MemorySample struct {
 	Percentage float64 `json:"percentage"`
 }
 
-func newMemoryCollector() *memoryCollector {
-	return &memoryCollector{
+func newMemoryCollector(cfg config.Config) (*memoryCollector, error) {
+	//=== TODO: get values from config
+
+	coll := &memoryCollector{
 		interval:       time.Second * 2,
 		maxHistorySize: 50,
 	}
+	return coll, nil //=== TODO: check possible errors
 }
 
 func collectMemorySample() MemorySample {
 
 	if stat, err := mem.VirtualMemory(); err != nil {
-		//=== TODO: log
+		slog.Warn("error collecting virtual memory data",
+			slog.Any("error", err),
+		)
 		return MemorySample{
 			Timestamp: time.Now(),
 			Valid:     false,

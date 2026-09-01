@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/disk"
 )
 
@@ -82,7 +83,9 @@ func collectMountpointStats() []MountpointStat {
 	r := []MountpointStat(nil)
 	partitions, err := disk.Partitions(false)
 	if err != nil {
-		//=== TODO: log
+		slog.Warn("error collecting mountpoint stat",
+			slog.Any("error", err),
+		)
 		return r
 	}
 
@@ -111,8 +114,7 @@ func (c *diskCollector) addDeviceSample(device string, data DeviceIOData) {
 				lastIOData: data,
 			}
 		} else {
-			slog.Warn("Receive invalid device I/O data", slog.Any("device", device))
-			//== TODO: log
+			slog.Warn("receive invalid device I/O data", slog.Any("device", device))
 		}
 		return
 	}
@@ -141,7 +143,9 @@ func (c *diskCollector) updateDeviceStats() {
 	timestamp := time.Now()
 	counters, err := disk.IOCounters()
 	if err != nil {
-		//=== TODO: log
+		slog.Warn("error collecting device stats",
+			slog.Any("error", err),
+		)
 
 		for device := range maps.Keys(c.stat.Devices) {
 			c.addDeviceSample(device,
@@ -169,14 +173,17 @@ func (c *diskCollector) updateDeviceStats() {
 
 }
 
-func newDiskCollector() *diskCollector {
-	return &diskCollector{
+func newDiskCollector(cfg config.Config) (*diskCollector, error) {
+
+	//=== TODO: get values from config
+	coll := &diskCollector{
 		interval:       time.Second * 2,
 		maxHistorySize: 50,
 		stat: DiskExport{
 			Devices: make(map[string]*DeviceStat),
 		},
 	}
+	return coll, nil //=== TODO: check possible errors
 }
 
 func (c *diskCollector) collect() {

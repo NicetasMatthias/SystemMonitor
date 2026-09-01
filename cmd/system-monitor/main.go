@@ -38,7 +38,7 @@ func run() {
 	cfg, err := config.Load("config.json") //=== TODO: set proper config path
 
 	if err != nil {
-		slog.Error("Failed to load config",
+		slog.Error("failed to load config",
 			slog.Any("error", err))
 		panic(err)
 	}
@@ -50,31 +50,39 @@ func run() {
 
 	application, err := app.New(*cfg)
 	if err != nil {
-		// === TODO: log
-		panic(err)
-	}
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	if err := application.Start(ctx); err != nil {
-		slog.Error("system-monitor failed",
+		slog.Error("failed to setup application",
 			slog.Any("error", err))
 		panic(err)
 	}
 
-	slog.Info("system-monitor started", slog.Any("version", info.Version))
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
-	<-sigChan
+	if err := application.Start(ctx); err != nil {
+		slog.Error("application failed to start",
+			slog.Any("error", err))
+		panic(err)
+	}
+
+	slog.Info("application started", slog.Any("version", info.Version))
+
+	if err := application.Wait(ctx); err != nil {
+		slog.Error("application failed",
+			slog.Any("error", err))
+		panic(err)
+	}
 
 	slog.Info("Shutting down gracefully...")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
 	if err := application.Shutdown(shutdownCtx); err != nil {
 
-		slog.Error("Server shutdown failed", slog.Any("error", err))
+		slog.Error("application shutdown failed", slog.Any("error", err))
 		panic(err)
 	} else {
 		slog.Info("Shutdown complete")

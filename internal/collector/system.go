@@ -2,9 +2,11 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -54,21 +56,27 @@ func collectHostInfo() HostInfo {
 		r.Architecture = hostInfo.KernelArch
 		r.BootTime = time.Unix(int64(hostInfo.BootTime), 0)
 	} else {
-		//=== TODO: log
+		slog.Warn("error collecting host info",
+			slog.Any("error", err),
+		)
 		r.BootTime = time.Unix(0, 0)
 	}
 
 	if logicalCPUs, err := cpu.Counts(true); err == nil {
 		r.LogicalCPUs = logicalCPUs
 	} else {
-		//=== TODO: log
+		slog.Warn("error collecting logical cpu counts",
+			slog.Any("error", err),
+		)
 		r.LogicalCPUs = -1
 	}
 
 	if physicalCores, err := cpu.Counts(false); err == nil {
 		r.PhysicalCores = physicalCores
 	} else {
-		//=== TODO: log
+		slog.Warn("error collecting physical cpu counts",
+			slog.Any("error", err),
+		)
 		r.PhysicalCores = -1
 	}
 
@@ -86,20 +94,24 @@ func collectActivityInfo() ActivityInfo {
 	if users, err := host.Users(); err == nil {
 		r.SessionCount = len(users)
 	} else {
-		//=== TODO: log
+		slog.Warn("error collecting sessions count",
+			slog.Any("error", err),
+		)
 		r.SessionCount = 0
 	}
 
 	return r
 }
 
-func newSystemCollector() *systemCollector {
-	return &systemCollector{
+func newSystemCollector(cfg config.Config) (*systemCollector, error) {
+	//=== TODO: get values from config
+	coll := &systemCollector{
 		interval: time.Second * 10,
 		state: SystemExport{
 			Host: collectHostInfo(),
 		},
 	}
+	return coll, nil //=== TODO: check possible errors
 }
 
 func (c *systemCollector) collect() {

@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"time"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
@@ -19,15 +21,14 @@ func New(cfg config.Config) (*Application, error) {
 	coll, err := collector.New(cfg)
 
 	if err != nil {
-		//=== TODO: log
+		slog.Error("failed to setup collector", slog.Any("error", err))
 		return nil, err
 	}
 
-	//=== TODO: передавать конфиг тут
 	srv, err := server.New(coll, cfg.HTTPPort)
 
 	if err != nil {
-		//=== TODO: log
+		slog.Error("failed to setup server", slog.Any("error", err))
 		return nil, err
 	}
 
@@ -40,29 +41,48 @@ func New(cfg config.Config) (*Application, error) {
 func (app *Application) Start(ctx context.Context) error {
 
 	if err := app.collector.Start(ctx); err != nil {
-		//=== TODO: log
+		slog.Error("failed to start collector", slog.Any("error", err))
 		return err
 	}
 
-	//=== TODO: Тут должен быть контекст
-
 	if err := app.server.Start(); err != nil {
-		//=== TODO: log
+		slog.Error("failed to start server", slog.Any("error", err))
+		shutdownCtx, cancel := context.WithTimeout(
+			context.Background(),
+			5*time.Second,
+		)
+		defer cancel()
+
+		if stopErr := app.collector.Stop(shutdownCtx); stopErr != nil {
+			slog.Error(
+				"failed to rollback collector after server start failure",
+				slog.Any("error", stopErr),
+			)
+		}
+
 		return err
 	}
 
 	return nil
 }
 
-func (app *Application) Shutdown(ctx context.Context) error {
+func (app *Application) Wait(ctx context.Context) error {
+	select {
+	case err := <-app.server.Errors():
+		return err
+	case <-ctx.Done():
+		return nil
+	}
+}
 
+func (app *Application) Shutdown(ctx context.Context) error {
 	srvErr := app.server.Shutdown(ctx)
 	if srvErr != nil {
-		//==== TODO: log
+		slog.Error("failed to shutdown collector", slog.Any("error", srvErr))
 	}
 	collErr := app.collector.Stop(ctx)
 	if collErr != nil {
-		//==== TODO: log
+		slog.Error("failed to shutdown server", slog.Any("error", collErr))
 	}
 
 	return errors.Join(srvErr, collErr)

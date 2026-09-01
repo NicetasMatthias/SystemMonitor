@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
@@ -14,9 +15,10 @@ type Collector struct {
 	network *networkCollector
 	system  *systemCollector
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	startOnce sync.Once
+	startErr  error
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
 }
 
 type CollectorExport struct {
@@ -28,58 +30,89 @@ type CollectorExport struct {
 }
 
 func New(cfg config.Config) (*Collector, error) {
-	//==== TODO: переделать корректнее с учетом что все модули будут читать конфиг
-	var targets []NetworkTarget //=== FIXME: читать это из конфига или вообще отдаем его в подмодули
+
+	cpuColl, cpuErr := newCPUCollector(cfg)
+	diskColl, diskErr := newDiskCollector(cfg)
+	memColl, memErr := newMemoryCollector(cfg)
+	netColl, netErr := newNetworkCollector(cfg)
+	sysColl, sysErr := newSystemCollector(cfg)
+
 	return &Collector{
-		cpu:     newCPUCollector(),
-		disk:    newDiskCollector(),
-		memory:  newMemoryCollector(),
-		network: newNetworkCollector(targets),
-		system:  newSystemCollector(),
-	}, nil
+			cpu:     cpuColl,
+			disk:    diskColl,
+			memory:  memColl,
+			network: netColl,
+			system:  sysColl,
+		},
+		errors.Join(
+			cpuErr,
+			diskErr,
+			memErr,
+			netErr,
+			sysErr,
+		)
 }
 
 func (c *Collector) Start(ctx context.Context) error {
 
-	c.ctx, c.cancel = context.WithCancel(ctx)
+	c.startOnce.Do(func() {
+		ctx, c.cancel = context.WithCancel(ctx)
 
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.cpu.Run(c.ctx)
-	}()
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.cpu.Run(ctx)
+		}()
 
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.disk.Run(c.ctx)
-	}()
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.disk.Run(ctx)
+		}()
 
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.memory.Run(c.ctx)
-	}()
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.memory.Run(ctx)
+		}()
 
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.network.Run(c.ctx)
-	}()
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.network.Run(ctx)
+		}()
 
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		c.system.Run(c.ctx)
-	}()
+		c.wg.Add(1)
+		go func() {
+			defer c.wg.Done()
+			c.system.Run(ctx)
+		}()
 
-	return nil //=== FIXME: придумать как тут и что проверить
+		//=== TODO: check Run`s via chan and set c.startErr
+	})
+
+	return c.startErr
 }
 
 func (c *Collector) Stop(ctx context.Context) error {
+	if c.cancel == nil {
+		return nil
+	}
 	c.cancel()
-	c.wg.Wait()
-	return nil
+
+	done := make(chan struct{})
+
+	go func() {
+		c.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (c *Collector) Get() CollectorExport {

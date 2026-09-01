@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 )
 
 type networkCollector struct {
@@ -65,13 +67,16 @@ func collectNetworkStatus(target NetworkTarget) NetworkStatus {
 	}
 }
 
-func newNetworkCollector(netTargets []NetworkTarget) *networkCollector {
-	return &networkCollector{
+func newNetworkCollector(cfg config.Config) (*networkCollector, error) {
+	//=== TODO: get values from config
+	netTargets := make([]NetworkTarget, 0)
+	coll := &networkCollector{
 		targets: netTargets,
 		state: NetworkExport{
 			Stats: make(map[string]NetworkStatus),
 		},
 	}
+	return coll, nil //=== TODO: check possible errors
 }
 
 func (c *networkCollector) collect(target NetworkTarget) {
