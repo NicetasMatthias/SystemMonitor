@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/NicetasMatthias/SystemMonitor/internal/app"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/NicetasMatthias/SystemMonitor/internal/info"
 	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
@@ -43,61 +48,38 @@ func run() {
 		panic(err)
 	}
 
-	// var targets []collector.NetworkTarget
+	application, err := app.New(*cfg)
+	if err != nil {
+		// === TODO: log
+		panic(err)
+	}
 
-	// for _, t := range cfg.NetworkTargets {
-	// 	timeout := t.Timeout.Duration
-	// 	if timeout == 0 {
-	// 		timeout = 5 * time.Second
-	// 	}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// 	targets = append(targets, collector.NetworkTarget{
-	// 		Name:     t.Name,
-	// 		Address:  t.Address,
-	// 		Protocol: t.Protocol,
-	// 		Interval: t.Interval.Duration,
-	// 		Timeout:  timeout,
-	// 	})
-	// }
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := application.Start(ctx); err != nil {
+		slog.Error("system-monitor failed",
+			slog.Any("error", err))
+		panic(err)
+	}
 
-	// col := collector.New(cfg.MaxHistorySize, targets, cfg.DiskPaths, cfg.DiskCollectInterval.Duration)
-	// col.Start(cfg.NetworkCollectInterval.Duration)
+	slog.Info("system-monitor started", slog.Any("version", info.Version))
 
-	// srv := server.New(col)
+	<-sigChan
 
-	// sigChan := make(chan os.Signal, 1)
-	// signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	slog.Info("Shutting down gracefully...")
 
-	// go func() {
-	// 	slog.Info("Server staring",
-	// 		slog.String("port", cfg.HTTPPort))
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := application.Shutdown(shutdownCtx); err != nil {
 
-	// 	if err := srv.Start(cfg.HTTPPort); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("Server shutdown failed", slog.Any("error", err))
+		panic(err)
+	} else {
+		slog.Info("Shutdown complete")
+	}
 
-	// 		slog.Error("Server startup failed",
-	// 			slog.Any("error", err))
-	// 	}
-	// }()
-
-	// slog.Info("system-monitor started", slog.Any("version", info.Version))
-
-	// <-sigChan
-
-	// slog.Info("Shutting down gracefully...")
-
-	// shutdownCtx, cancel := context.WithTimeout(
-	// 	context.Background(),
-	// 	5*time.Second,
-	// )
-	// defer cancel()
-
-	// if err := srv.Shutdown(shutdownCtx); err != nil {
-	// 	slog.Error("Server shutdown failed", slog.Any("error", err))
-	// }
-
-	// col.Stop()
-
-	// slog.Info("Shutdown complete")
 }
 
 func printVersion() {

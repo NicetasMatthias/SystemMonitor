@@ -76,9 +76,10 @@ func (c *Collector) Start(ctx context.Context) error {
 	return nil //=== FIXME: придумать как тут и что проверить
 }
 
-func (c *Collector) Stop() {
+func (c *Collector) Stop(ctx context.Context) error {
 	c.cancel()
 	c.wg.Wait()
+	return nil
 }
 
 func (c *Collector) Get() CollectorExport {

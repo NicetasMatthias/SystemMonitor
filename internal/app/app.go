@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
@@ -15,7 +16,6 @@ type Application struct {
 
 func New(cfg config.Config) (*Application, error) {
 
-	//=== TODO: убрать это внутрь реализации collector.New, чтобы он принимал только конфиг
 	coll, err := collector.New(cfg)
 
 	if err != nil {
@@ -38,22 +38,32 @@ func New(cfg config.Config) (*Application, error) {
 }
 
 func (app *Application) Start(ctx context.Context) error {
-	//=== TODO: Тут должен быть контекст и возврат ошибки
-	app.collector.Start(ctx)
 
-	// if err != nil {
-	// 	//=== TODO: log
-	// 	return nil, err
-	// }
+	if err := app.collector.Start(ctx); err != nil {
+		//=== TODO: log
+		return err
+	}
 
 	//=== TODO: Тут должен быть контекст
-	err := app.server.Start("")
 
-	if err != nil {
+	if err := app.server.Start(); err != nil {
 		//=== TODO: log
 		return err
 	}
 
 	return nil
+}
 
+func (app *Application) Shutdown(ctx context.Context) error {
+
+	srvErr := app.server.Shutdown(ctx)
+	if srvErr != nil {
+		//==== TODO: log
+	}
+	collErr := app.collector.Stop(ctx)
+	if collErr != nil {
+		//==== TODO: log
+	}
+
+	return errors.Join(srvErr, collErr)
 }
