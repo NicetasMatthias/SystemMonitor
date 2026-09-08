@@ -7,8 +7,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 )
 
 type networkCollector struct {
@@ -24,14 +22,6 @@ type NetworkExport struct {
 	Stats map[string]NetworkStatus `json:"stats"`
 }
 
-type NetworkTarget struct {
-	Name     string
-	Address  string
-	Protocol string
-	Interval time.Duration
-	Timeout  time.Duration
-}
-
 type NetworkStatus struct {
 	Reachable bool          `json:"reachable"`
 	Latency   time.Duration `json:"latency"`
@@ -40,7 +30,8 @@ type NetworkStatus struct {
 
 func collectNetworkStatus(target NetworkTarget) NetworkStatus {
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), target.Timeout)
+	//=== TODO: use collector context
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(target.Timeout)*time.Second)
 	defer cancel()
 
 	var dialer net.Dialer
@@ -67,11 +58,9 @@ func collectNetworkStatus(target NetworkTarget) NetworkStatus {
 	}
 }
 
-func newNetworkCollector(cfg config.Config) (*networkCollector, error) {
-	//=== TODO: get values from config
-	netTargets := make([]NetworkTarget, 0)
+func newNetworkCollector(cfg NetworkConfig) (*networkCollector, error) {
 	coll := &networkCollector{
-		targets: netTargets,
+		targets: cfg.Targets,
 		state: NetworkExport{
 			Stats: make(map[string]NetworkStatus),
 		},
@@ -98,7 +87,7 @@ func (c *networkCollector) Run(ctx context.Context) {
 }
 
 func (c *networkCollector) checkLoop(target NetworkTarget, ctx context.Context) {
-	ticker := time.NewTicker(target.Interval)
+	ticker := time.NewTicker(time.Duration(target.Interval))
 	defer ticker.Stop()
 
 	c.collect(target)

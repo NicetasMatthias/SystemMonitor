@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -16,17 +16,21 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		run()
-	} else if os.Args[1] == "version" || os.Args[1] == "--version" {
+	configPath := flag.String("config", "", "path to config file")
+	version := flag.Bool("version", false, "print version")
+
+	flag.Parse()
+
+	if *version {
 		printVersion()
-	} else {
-		printHelp()
+		return
 	}
+
+	run(*configPath)
 
 }
 
-func run() {
+func run(cfgPath string) {
 
 	err := logger.Init()
 	if err != nil {
@@ -35,16 +39,11 @@ func run() {
 		panic(err)
 	}
 
-	cfg, err := config.Load("config.json") //=== TODO: set proper config path
+	cfg, err := config.Load(cfgPath)
 
 	if err != nil {
 		slog.Error("failed to load config",
 			slog.Any("error", err))
-		panic(err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		slog.Error(err.Error())
 		panic(err)
 	}
 
@@ -78,22 +77,18 @@ func run() {
 
 	slog.Info("Shutting down gracefully...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
+	defer func() {
+		shutdownCancel()
+	}()
 	if err := application.Shutdown(shutdownCtx); err != nil {
-
 		slog.Error("application shutdown failed", slog.Any("error", err))
 		panic(err)
 	} else {
 		slog.Info("Shutdown complete")
 	}
-
 }
 
 func printVersion() {
 	fmt.Println(info.Printable())
-}
-
-func printHelp() {
-	fmt.Println("wrong args") //=== TODO: write help
 }

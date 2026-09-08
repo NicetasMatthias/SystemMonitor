@@ -40,11 +40,11 @@ type apiError struct {
 	Error string `json:"error"`
 }
 
-func New(c statsCollector, port string) (*Server, error) {
+func New(c statsCollector, cfg Config) (*Server, error) {
 	s := &Server{
 		router:    mux.NewRouter(),
 		collector: c,
-		port:      port,
+		port:      cfg.Port,
 		errCh:     make(chan error, 1),
 	}
 
@@ -56,7 +56,7 @@ func New(c statsCollector, port string) (*Server, error) {
 
 	s.srv = &http.Server{
 		Handler:      s.router,
-		Addr:         ":" + port,
+		Addr:         ":" + s.port,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}

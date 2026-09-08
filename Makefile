@@ -32,7 +32,7 @@ build: deps
 	@echo "Done! Binary: $(BINARY_DIR)/$(BINARY_NAME)"
 	
 run: deps
-	go run -tags "dev" $(MAIN_PACKAGE)
+	go run -tags "dev" $(MAIN_PACKAGE) --config ./configs/config.example.json
 	
 run-prod: deps
 	go run $(MAIN_PACKAGE)

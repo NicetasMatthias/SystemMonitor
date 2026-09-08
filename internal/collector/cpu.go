@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/load"
 )
@@ -18,6 +17,7 @@ type cpuCollector struct {
 	maxHistorySize int
 	mx             sync.RWMutex
 }
+
 type CPUExport struct {
 	History []CPUSample `json:"history"`
 }
@@ -123,12 +123,11 @@ func collectLoadAverage() LoadAverage {
 	}
 }
 
-func newCPUCollector(cfg config.Config) (*cpuCollector, error) {
+func newCPUCollector(cfg CpuConfig) (*cpuCollector, error) {
 
-	//=== TODO: get values from config
 	coll := &cpuCollector{
-		interval:       time.Second * 2,
-		maxHistorySize: 50,
+		interval:       time.Second * time.Duration(cfg.Interval),
+		maxHistorySize: cfg.MaxHistorySize,
 	}
 	return coll, nil //=== TODO: check possible errors
 }
