@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/disk"
 )
 
@@ -173,12 +172,11 @@ func (c *diskCollector) updateDeviceStats() {
 
 }
 
-func newDiskCollector(cfg config.Config) (*diskCollector, error) {
+func newDiskCollector(cfg DiskConfig) (*diskCollector, error) {
 
-	//=== TODO: get values from config
 	coll := &diskCollector{
-		interval:       time.Second * 2,
-		maxHistorySize: 50,
+		interval:       time.Second * time.Duration(cfg.Interval),
+		maxHistorySize: cfg.MaxHistorySize,
 		stat: DiskExport{
 			Devices: make(map[string]*DeviceStat),
 		},

@@ -18,14 +18,14 @@ type Application struct {
 
 func New(cfg config.Config) (*Application, error) {
 
-	coll, err := collector.New(cfg)
+	coll, err := collector.New(cfg.Collector)
 
 	if err != nil {
 		slog.Error("failed to setup collector", slog.Any("error", err))
 		return nil, err
 	}
 
-	srv, err := server.New(coll, cfg.HTTPPort)
+	srv, err := server.New(coll, cfg.Server)
 
 	if err != nil {
 		slog.Error("failed to setup server", slog.Any("error", err))

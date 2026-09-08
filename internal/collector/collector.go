@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 )
 
 type Collector struct {
@@ -29,13 +27,13 @@ type CollectorExport struct {
 	System  SystemExport
 }
 
-func New(cfg config.Config) (*Collector, error) {
+func New(cfg Config) (*Collector, error) {
 
-	cpuColl, cpuErr := newCPUCollector(cfg)
-	diskColl, diskErr := newDiskCollector(cfg)
-	memColl, memErr := newMemoryCollector(cfg)
-	netColl, netErr := newNetworkCollector(cfg)
-	sysColl, sysErr := newSystemCollector(cfg)
+	cpuColl, cpuErr := newCPUCollector(cfg.Cpu)
+	diskColl, diskErr := newDiskCollector(cfg.Disk)
+	memColl, memErr := newMemoryCollector(cfg.Memory)
+	netColl, netErr := newNetworkCollector(cfg.Network)
+	sysColl, sysErr := newSystemCollector(cfg.System)
 
 	return &Collector{
 			cpu:     cpuColl,

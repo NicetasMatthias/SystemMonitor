@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -103,10 +102,10 @@ func collectActivityInfo() ActivityInfo {
 	return r
 }
 
-func newSystemCollector(cfg config.Config) (*systemCollector, error) {
-	//=== TODO: get values from config
+func newSystemCollector(cfg SystemConfig) (*systemCollector, error) {
+
 	coll := &systemCollector{
-		interval: time.Second * 10,
+		interval: time.Second * time.Duration(cfg.Interval),
 		state: SystemExport{
 			Host: collectHostInfo(),
 		},

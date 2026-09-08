@@ -1,0 +1,38 @@
+{
+    "server": {
+        "port": "55432"
+    },
+    "collector": {
+        "cpu": {
+            "interval": 5,
+            "history_size": 100
+        },
+        "disk": {
+            "interval": 10,
+            "history_size": 100
+        },
+        "memory": {
+            "interval": 5,
+            "history_size": 100
+        },
+        "network": {
+            "targets": [
+                {
+                    "name": "Google",
+                    "addr": "google.com:80",
+                    "protocol": "tcp",
+                    "interval": 10,
+                    "timeout": 2
+                },
+                {
+                    "name": "Local router",
+                    "addr": "192.168.0.1:80",
+                    "interval": 10
+                }
+            ]
+        },
+        "system": {
+            "interval": 10
+        }
+    }
+}
