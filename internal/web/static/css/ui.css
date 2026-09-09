@@ -1,0 +1,361 @@
+/*
+ * ==========================================================================
+ * UI enhancements
+ * ==========================================================================
+ */
+
+
+/*
+ * ==========================================================================
+ * Theme
+ * ==========================================================================
+ */
+
+:root {
+    --background: #111827;
+    --surface: #1f2937;
+    --surface-muted: #182230;
+
+    --border: #374151;
+    --border-dark: #4b5563;
+
+    --text: #f3f4f6;
+    --text-muted: #9ca3af;
+    --text-light: #6b7280;
+
+    --primary: #60a5fa;
+
+    --shadow:
+        0 1px 3px rgba(0, 0, 0, 0.30),
+        0 1px 2px rgba(0, 0, 0, 0.20);
+
+    --log-background: #111827;
+    --log-border: #374151;
+
+    --chart-text: #9ca3af;
+    --chart-grid: rgba(156, 163, 175, 0.16);
+
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    --background: #f5f7fa;
+    --surface: #ffffff;
+    --surface-muted: #f8fafc;
+
+    --border: #e5e7eb;
+    --border-dark: #d1d5db;
+
+    --text: #1f2937;
+    --text-muted: #6b7280;
+    --text-light: #9ca3af;
+
+    --primary: #3498db;
+
+    --shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 1px 2px rgba(0, 0, 0, 0.04);
+
+    --log-background: #ffffff;
+    --log-border: #e5e7eb;
+
+    --chart-text: #6b7280;
+    --chart-grid: rgba(107, 114, 128, 0.16);
+
+    color-scheme: light;
+}
+
+html,
+body {
+    background: var(--background);
+    color: var(--text);
+}
+
+body {
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.card,
+.info-card,
+.metric-card {
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+ * ==========================================================================
+ * Header
+ * ==========================================================================
+ */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.theme-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+
+    padding: 3px;
+
+    background: var(--surface-muted);
+
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.theme-button {
+    width: 32px;
+    height: 30px;
+
+    padding: 0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background: transparent;
+
+    border: 0;
+    border-radius: 999px;
+
+    color: var(--text-muted);
+
+    font-size: 16px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.theme-button:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+:root[data-theme="light"] #themeLight,
+:root[data-theme="dark"] #themeDark {
+    background: var(--surface);
+    color: var(--text);
+
+    box-shadow: var(--shadow);
+}
+
+
+/*
+ * ==========================================================================
+ * Collapsible sections
+ * ==========================================================================
+ */
+
+.collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 8px;
+
+    margin: 0;
+    padding: 0;
+
+    background: transparent;
+
+    border: 0;
+
+    color: inherit;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+.section-title .collapse-toggle {
+    min-height: 28px;
+}
+
+.card-header .collapse-toggle {
+    min-height: 24px;
+}
+
+.collapse-toggle:hover {
+    color: var(--primary);
+}
+
+.collapse-toggle:focus-visible,
+.theme-button:focus-visible,
+.logs-controls button:focus-visible,
+.logs-controls select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.collapse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+
+    flex: 0 0 auto;
+
+    color: var(--text-muted);
+
+    font-size: 18px;
+    line-height: 1;
+
+    transform: rotate(0deg);
+
+    transition:
+        transform 0.16s ease,
+        color 0.16s ease;
+}
+
+.collapse-toggle:hover .collapse-icon {
+    color: var(--primary);
+}
+
+.collapse-toggle[aria-expanded="false"] .collapse-icon {
+    transform: rotate(-90deg);
+}
+
+.collapsible-content {
+    transition:
+        opacity 0.15s ease;
+}
+
+.collapsible-content.is-collapsed {
+    display: none;
+}
+
+
+/*
+ * Keep headings looking exactly like the original ones.
+ */
+
+.section-title .collapse-toggle h2 {
+    margin: 0;
+
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.card-header .collapse-toggle h3 {
+    margin: 0;
+
+    font-size: 15px;
+    font-weight: 600;
+}
+
+
+/*
+ * ==========================================================================
+ * Dark theme adjustments for existing components
+ * ==========================================================================
+ */
+
+:root:not([data-theme="light"]) .progress-bar {
+    background: #374151;
+}
+
+:root:not([data-theme="light"]) .logs-container {
+    background: var(--log-background);
+}
+
+:root:not([data-theme="light"]) .log-entry {
+    border-color: var(--log-border);
+}
+
+
+/*
+ * ==========================================================================
+ * Logs
+ * ==========================================================================
+ */
+
+.logs-container {
+    background: var(--log-background);
+    color: var(--text);
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.log-entry {
+    border-color: var(--log-border);
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.log-time,
+.log-message,
+.log-attrs {
+    color: inherit;
+}
+
+
+/*
+ * ==========================================================================
+ * Controls
+ * ==========================================================================
+ */
+
+.logs-controls select,
+.logs-controls button {
+    background: var(--surface);
+    border-color: var(--border-dark);
+    color: var(--text);
+}
+
+.logs-controls select:hover,
+.logs-controls button:hover {
+    background: var(--surface-muted);
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+
+/*
+ * ==========================================================================
+ * Responsive
+ * ==========================================================================
+ */
+
+@media (max-width: 800px) {
+    .header-actions {
+        align-items: flex-end;
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .page-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .header-actions {
+        align-items: flex-start;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .section-title {
+        align-items: flex-start;
+    }
+}
