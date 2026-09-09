@@ -19,14 +19,47 @@
             "targets": [
                 {
                     "name": "Google",
-                    "addr": "google.com:80",
-                    "protocol": "tcp",
+                    "addr": "google.com/robots.txt",
+                    "type": "https",
+                    "interval": 10,
+                    "timeout": 2
+                },
+                {
+                    "name": "Instagram",
+                    "addr": "instagram.com/robots.txt",
+                    "type": "https",
+                    "interval": 10,
+                    "timeout": 2
+                },
+                {
+                    "name": "YouTube",
+                    "addr": "youtube.com/robots.txt",
+                    "type": "https",
                     "interval": 10,
                     "timeout": 2
                 },
                 {
                     "name": "Local router",
-                    "addr": "192.168.0.1:80",
+                    "addr": "192.168.0.1",
+                    "type": "http",
+                    "interval": 10
+                },
+                {
+                    "name": "Cloudflare DNS",
+                    "addr": "1.1.1.1:53",
+                    "type": "dns",
+                    "interval": 10
+                },
+                {
+                    "name": "Google DNS",
+                    "addr": "8.8.8.8:53",
+                    "type": "dns",
+                    "interval": 10
+                },
+                {
+                    "name": "Quad9 DNS",
+                    "addr": "9.9.9.9:53",
+                    "type": "dns",
                     "interval": 10
                 }
             ]
