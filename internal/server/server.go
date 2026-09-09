@@ -105,8 +105,6 @@ func (s *Server) routes() error {
 		return err
 	}
 
-	//=== TODO: improve processing MethodNotAllowed
-
 	s.router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", http.MethodGet)
 		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -133,12 +131,10 @@ func (s *Server) routes() error {
 	s.router.HandleFunc("/api/stats/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
-	// s.router.HandleFunc("/api/logs/", s.handleApiLogs()).Methods(http.MethodGet)
-	// s.router.HandleFunc("/api/logs", s.handleApiLogs()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/logs/stream", s.handleApiLogsStream()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/logs/stream/", s.handleApiLogsStream()).Methods(http.MethodGet)
 
-	return nil //=== TODO: сделать проверки где можно
+	return nil
 }
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {
@@ -216,13 +212,6 @@ func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 		writeJSON(w, http.StatusOK, s.collector.GetSystem())
 	}
 }
-
-//  FIXME: WIP
-// func (s *Server) handleApiLogs() http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		// writeJSON(w, http.StatusOK, s.logsStorage.Entries())
-// 	}
-// }
 
 func (s *Server) handleApiLogsStream() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
