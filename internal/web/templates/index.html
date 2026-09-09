@@ -94,6 +94,7 @@
             <div class="charts-grid">
                 <div class="card chart-card">
                     <h3>Total CPU Usage</h3>
+
                     <div class="chart-container">
                         <canvas id="cpuChart"></canvas>
                     </div>
@@ -101,6 +102,7 @@
 
                 <div class="card chart-card">
                     <h3>Load Average</h3>
+
                     <div class="chart-container">
                         <canvas id="loadChart"></canvas>
                     </div>
@@ -191,6 +193,53 @@
                 </div>
 
                 <div id="networkStatus" class="network-grid"></div>
+            </div>
+        </section>
+
+        <!-- Logs -->
+        <section class="section">
+            <div class="section-title">
+                <h2>Logs</h2>
+
+                <div class="refresh-indicator">
+                    <span id="logConnectionStatus" class="status-dot"></span>
+                    <span id="logConnectionText">Connecting...</span>
+                </div>
+            </div>
+
+            <div class="card logs-card">
+                <div class="card-header">
+                    <h3>Application Logs</h3>
+
+                    <div class="logs-controls">
+                        <label>
+                            <span class="sr-only">Log level</span>
+
+                            <select id="logLevelFilter">
+                                <option value="all">All</option>
+                                <option value="DEBUG">Debug</option>
+                                <option value="INFO">Info</option>
+                                <option value="WARN">Warn</option>
+                                <option value="ERROR">Error</option>
+                            </select>
+                        </label>
+
+                        <label class="logs-autoscroll">
+                            <input id="logAutoScroll" type="checkbox" checked>
+                            Auto-scroll
+                        </label>
+
+                        <button id="clearLogs" type="button">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div id="logs" class="logs-container">
+                    <div id="logsEmpty" class="empty-state">
+                        Waiting for logs...
+                    </div>
+                </div>
             </div>
         </section>
 

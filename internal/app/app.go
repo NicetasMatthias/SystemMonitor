@@ -8,6 +8,7 @@ import (
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/config"
+	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
 	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
@@ -25,7 +26,7 @@ func New(cfg config.Config) (*Application, error) {
 		return nil, err
 	}
 
-	srv, err := server.New(coll, cfg.Server)
+	srv, err := server.New(coll, logger.Logs(), cfg.Server)
 
 	if err != nil {
 		slog.Error("failed to setup server", slog.Any("error", err))

@@ -14,7 +14,22 @@ type LogEntry struct {
 	Attrs   map[string]any `json:"attrs,omitempty"`
 }
 
-type webHandlerState struct {
+type LogSubscription struct {
+	History []LogEntry
+	Events  <-chan LogEntry
+	Cancel  func()
+}
+
+type LogStore interface {
+	Subscribe() LogSubscription
+}
+
+var (
+	storageState *storageHandlerState
+	storageOnce  sync.Once
+)
+
+type storageHandlerState struct {
 	mx sync.RWMutex
 
 	entries []LogEntry
@@ -23,27 +38,37 @@ type webHandlerState struct {
 	subscribers map[chan LogEntry]struct{}
 }
 
-type webHandler struct {
-	state *webHandlerState
+type storageHandler struct {
+	state *storageHandlerState
 
 	attrs  []slog.Attr
 	groups []string
 }
 
-func newWebHandler() *webHandler {
-	return &webHandler{
-		state: &webHandlerState{
+func newStorageHandler() *storageHandler {
+
+	storageOnce.Do(func() {
+		storageState = &storageHandlerState{
 			maxSize:     1000,
 			subscribers: make(map[chan LogEntry]struct{}),
-		},
+		}
+	})
+
+	return &storageHandler{
+		state: storageState,
 	}
+
 }
 
-func (h *webHandler) Enabled(_ context.Context, _ slog.Level) bool {
+func Logs() LogStore {
+	return storageState
+}
+
+func (h *storageHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
-func (h *webHandler) Handle(_ context.Context, r slog.Record) error {
+func (h *storageHandler) Handle(_ context.Context, r slog.Record) error {
 
 	entry := LogEntry{
 		Time:    r.Time,
@@ -65,7 +90,7 @@ func (h *webHandler) Handle(_ context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *webHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *storageHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) == 0 {
 		return h
 	}
@@ -74,14 +99,14 @@ func (h *webHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	newAttrs = append(newAttrs, h.attrs...)
 	newAttrs = append(newAttrs, attrs...)
 
-	return &webHandler{
+	return &storageHandler{
 		state:  h.state,
 		attrs:  newAttrs,
 		groups: append([]string(nil), h.groups...),
 	}
 }
 
-func (h *webHandler) WithGroup(name string) slog.Handler {
+func (h *storageHandler) WithGroup(name string) slog.Handler {
 	if name == "" {
 		return h
 	}
@@ -90,14 +115,14 @@ func (h *webHandler) WithGroup(name string) slog.Handler {
 	newGroups = append(newGroups, h.groups...)
 	newGroups = append(newGroups, name)
 
-	return &webHandler{
+	return &storageHandler{
 		state:  h.state,
 		attrs:  append([]slog.Attr(nil), h.attrs...),
 		groups: newGroups,
 	}
 }
 
-func (s *webHandlerState) Entries() []LogEntry {
+func (s *storageHandlerState) Entries() []LogEntry {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
 
@@ -106,12 +131,12 @@ func (s *webHandlerState) Entries() []LogEntry {
 	return entries
 }
 
-func (s *webHandlerState) Subscribe() (<-chan LogEntry, func()) {
+func (s *storageHandlerState) Subscribe() LogSubscription {
 	ch := make(chan LogEntry, s.maxSize)
 
 	s.mx.Lock()
+	defer s.mx.Unlock()
 	s.subscribers[ch] = struct{}{}
-	s.mx.Unlock()
 
 	cancel := func() {
 		s.mx.Lock()
@@ -119,10 +144,17 @@ func (s *webHandlerState) Subscribe() (<-chan LogEntry, func()) {
 		s.mx.Unlock()
 	}
 
-	return ch, cancel
+	history := make([]LogEntry, len(s.entries))
+	copy(history, s.entries)
+
+	return LogSubscription{
+		History: history,
+		Events:  ch,
+		Cancel:  cancel,
+	}
 }
 
-func (h *webHandler) addAttr(
+func (h *storageHandler) addAttr(
 	dst map[string]any,
 	groups []string,
 	attr slog.Attr,
@@ -164,7 +196,7 @@ func (h *webHandler) addAttr(
 	current[attr.Key] = value
 }
 
-func (s *webHandlerState) process(e LogEntry) {
+func (s *storageHandlerState) process(e LogEntry) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 

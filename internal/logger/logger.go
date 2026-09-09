@@ -18,6 +18,38 @@ type multiHandler struct {
 	level    slog.Level
 }
 
+func Setup(dev bool) {
+
+	once.Do(func() {
+		var handlers []slog.Handler
+
+		if dev {
+			handlers = append(handlers, slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+				AddSource: true,
+			}))
+		} else {
+			handlers = append(handlers, slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+				AddSource: false,
+			}))
+		}
+
+		handlers = append(handlers, newStorageHandler())
+
+		defaultLogger = slog.New(&multiHandler{
+			handlers: handlers,
+		})
+		slog.SetDefault(defaultLogger)
+	})
+}
+
+func Default() *slog.Logger {
+	if defaultLogger == nil {
+		return slog.Default()
+	} else {
+		return defaultLogger
+	}
+}
+
 func (h *multiHandler) Enabled(_ context.Context, l slog.Level) bool {
 	return l >= h.level
 }
@@ -56,38 +88,6 @@ func (h *multiHandler) WithGroup(name string) slog.Handler {
 	return &multiHandler{
 		handlers: handlers,
 		level:    h.level,
-	}
-}
-
-func Setup(dev bool) {
-
-	once.Do(func() {
-		var handlers []slog.Handler
-
-		if dev {
-			handlers = append(handlers, slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-				AddSource: true,
-			}))
-		} else {
-			handlers = append(handlers, slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-				AddSource: false,
-			}))
-		}
-
-		handlers = append(handlers, newWebHandler())
-
-		defaultLogger = slog.New(&multiHandler{
-			handlers: handlers,
-		})
-		slog.SetDefault(defaultLogger)
-	})
-}
-
-func Default() *slog.Logger {
-	if defaultLogger == nil {
-		return slog.Default()
-	} else {
-		return defaultLogger
 	}
 }
 
