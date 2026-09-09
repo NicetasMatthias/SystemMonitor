@@ -37,7 +37,7 @@ func newMemoryCollector(cfg MemoryConfig) (*memoryCollector, error) {
 		interval:       time.Second * time.Duration(cfg.Interval),
 		maxHistorySize: cfg.MaxHistorySize,
 	}
-	return coll, nil //=== TODO: check possible errors
+	return coll, nil
 }
 
 func collectMemorySample() MemorySample {

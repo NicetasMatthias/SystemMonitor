@@ -18,6 +18,7 @@ import (
 func main() {
 	configPath := flag.String("config", "", "path to config file")
 	version := flag.Bool("version", false, "print version")
+	dev := flag.Bool("dev", false, "development env")
 
 	flag.Parse()
 
@@ -26,18 +27,13 @@ func main() {
 		return
 	}
 
-	run(*configPath)
+	run(*dev, *configPath)
 
 }
 
-func run(cfgPath string) {
+func run(dev bool, cfgPath string) {
 
-	err := logger.Init()
-	if err != nil {
-		slog.Error("Failed to setup logger",
-			slog.Any("error", err))
-		panic(err)
-	}
+	logger.Setup(dev)
 
 	cfg, err := config.Load(cfgPath)
 

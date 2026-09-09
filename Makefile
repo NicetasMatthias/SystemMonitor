@@ -32,10 +32,10 @@ build: deps
 	@echo "Done! Binary: $(BINARY_DIR)/$(BINARY_NAME)"
 	
 run: deps
-	go run -tags "dev" $(MAIN_PACKAGE) --config ./configs/config.example.json
+	go run $(MAIN_PACKAGE) --config ./configs/config.example.json --dev
 	
 run-prod: deps
-	go run $(MAIN_PACKAGE)
+	go run $(MAIN_PACKAGE) --config ./configs/config.example.json 
 
 deps:
 	@echo "Downloading dependencies..."

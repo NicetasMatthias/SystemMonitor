@@ -110,7 +110,7 @@ func newSystemCollector(cfg SystemConfig) (*systemCollector, error) {
 			Host: collectHostInfo(),
 		},
 	}
-	return coll, nil //=== TODO: check possible errors
+	return coll, nil
 }
 
 func (c *systemCollector) collect() {
