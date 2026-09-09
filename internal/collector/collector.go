@@ -14,6 +14,7 @@ type Collector struct {
 	system  *systemCollector
 
 	startOnce sync.Once
+	stopOnce  sync.Once
 	startErr  error
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
@@ -86,7 +87,6 @@ func (c *Collector) Start(ctx context.Context) error {
 			c.system.Run(ctx)
 		}()
 
-		//=== TODO: check Run`s via chan and set c.startErr
 	})
 
 	return c.startErr
@@ -96,16 +96,20 @@ func (c *Collector) Stop(ctx context.Context) error {
 	if c.cancel == nil {
 		return nil
 	}
-	c.cancel()
 
 	done := make(chan struct{})
 
-	go func() {
-		c.wg.Wait()
-		close(done)
-	}()
+	c.stopOnce.Do(func() {
+		c.cancel()
+
+		go func() {
+			c.wg.Wait()
+			close(done)
+		}()
+	})
 
 	select {
+
 	case <-done:
 		return nil
 	case <-ctx.Done():

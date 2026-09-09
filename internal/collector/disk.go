@@ -125,10 +125,15 @@ func (c *diskCollector) addDeviceSample(device string, data DeviceIOData) {
 
 	if data.Valid {
 		tDiff := data.Timestamp.Sub(stat.lastIOData.Timestamp).Seconds()
-		sample.ReadThroughput = (float64(data.ReadBytes) - float64(stat.lastIOData.ReadBytes)) / tDiff
-		sample.WriteThroughput = (float64(data.WriteBytes) - float64(stat.lastIOData.WriteBytes)) / tDiff
-		sample.ReadIOPS = (float64(data.ReadCount) - float64(stat.lastIOData.ReadCount)) / tDiff
-		sample.WriteIOPS = (float64(data.WriteCount) - float64(stat.lastIOData.WriteCount)) / tDiff
+
+		if tDiff > 0 {
+			sample.ReadThroughput = (float64(data.ReadBytes) - float64(stat.lastIOData.ReadBytes)) / tDiff
+			sample.WriteThroughput = (float64(data.WriteBytes) - float64(stat.lastIOData.WriteBytes)) / tDiff
+			sample.ReadIOPS = (float64(data.ReadCount) - float64(stat.lastIOData.ReadCount)) / tDiff
+			sample.WriteIOPS = (float64(data.WriteCount) - float64(stat.lastIOData.WriteCount)) / tDiff
+		} else {
+			sample.Valid = false
+		}
 	}
 
 	if len(stat.History) >= int(c.maxHistorySize) {
@@ -181,7 +186,7 @@ func newDiskCollector(cfg DiskConfig) (*diskCollector, error) {
 			Devices: make(map[string]*DeviceStat),
 		},
 	}
-	return coll, nil //=== TODO: check possible errors
+	return coll, nil
 }
 
 func (c *diskCollector) collect() {

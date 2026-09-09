@@ -7,7 +7,34 @@
 
     <title>System Monitor</title>
 
+    <link rel="icon" type="image/svg+xml" href="./static/favicon.svg">
+
+    <!-- Apply the saved/system theme before the page is painted. -->
+    <script>
+        (() => {
+            try {
+                const savedTheme = localStorage.getItem("systemMonitor.theme");
+
+                if (savedTheme === "light" || savedTheme === "dark") {
+                    document.documentElement.dataset.theme = savedTheme;
+                    return;
+                }
+
+                const prefersLight = window.matchMedia(
+                    "(prefers-color-scheme: light)"
+                ).matches;
+
+                document.documentElement.dataset.theme =
+                    prefersLight ? "light" : "dark";
+            } catch (_) {
+                document.documentElement.dataset.theme = "dark";
+            }
+        })();
+    </script>
+
     <link rel="stylesheet" href="./static/css/style.css">
+    <link rel="stylesheet" href="./static/css/ui.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -20,183 +47,317 @@
                 <p class="subtitle">Real-time system metrics</p>
             </div>
 
-            <div class="refresh-indicator">
-                <span id="connectionStatus" class="status-dot"></span>
-                <span id="lastUpdate">Waiting for data...</span>
+            <div class="header-actions">
+                <div class="theme-switcher" role="group" aria-label="Theme">
+                    <button id="themeLight" class="theme-button" type="button" aria-label="Light theme"
+                        title="Light theme">
+                        ☀
+                    </button>
+
+                    <button id="themeDark" class="theme-button" type="button" aria-label="Dark theme"
+                        title="Dark theme">
+                        ☾
+                    </button>
+                </div>
+
+                <div class="refresh-indicator">
+                    <span id="connectionStatus" class="status-dot"></span>
+                    <span id="lastUpdate">Waiting for data...</span>
+                </div>
             </div>
         </header>
 
+
         <!-- System information -->
-        <section class="section">
+        <section class="section collapsible-section" data-section="system">
             <div class="section-title">
-                <h2>System</h2>
+                <button class="collapse-toggle" type="button" data-collapse-target="systemContent" aria-expanded="true"
+                    aria-controls="systemContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>System</h2>
+                </button>
             </div>
 
-            <div class="info-grid">
-                <div class="info-card">
-                    <span class="info-label">Hostname</span>
-                    <span id="hostname" class="info-value">—</span>
-                </div>
+            <div id="systemContent" class="collapsible-content">
+                <div class="info-grid">
+                    <div class="info-card">
+                        <span class="info-label">Hostname</span>
+                        <span id="hostname" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Operating System</span>
-                    <span id="os" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Operating System</span>
+                        <span id="os" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Platform</span>
-                    <span id="platform" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Platform</span>
+                        <span id="platform" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Architecture</span>
-                    <span id="architecture" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Architecture</span>
+                        <span id="architecture" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Kernel</span>
-                    <span id="kernelVersion" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Kernel</span>
+                        <span id="kernelVersion" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">CPU</span>
-                    <span id="cpuCount" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">CPU</span>
+                        <span id="cpuCount" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Boot Time</span>
-                    <span id="bootTime" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Boot Time</span>
+                        <span id="bootTime" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Uptime</span>
-                    <span id="uptime" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Uptime</span>
+                        <span id="uptime" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Processes</span>
-                    <span id="processCount" class="info-value">—</span>
-                </div>
+                    <div class="info-card">
+                        <span class="info-label">Processes</span>
+                        <span id="processCount" class="info-value">—</span>
+                    </div>
 
-                <div class="info-card">
-                    <span class="info-label">Sessions</span>
-                    <span id="sessionCount" class="info-value">—</span>
+                    <div class="info-card">
+                        <span class="info-label">Sessions</span>
+                        <span id="sessionCount" class="info-value">—</span>
+                    </div>
                 </div>
             </div>
         </section>
+
 
         <!-- CPU -->
-        <section class="section">
+        <section class="section collapsible-section" data-section="cpu">
             <div class="section-title">
-                <h2>CPU</h2>
+                <button class="collapse-toggle" type="button" data-collapse-target="cpuContent" aria-expanded="true"
+                    aria-controls="cpuContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>CPU</h2>
+                </button>
             </div>
 
-            <div class="charts-grid">
-                <div class="card chart-card">
-                    <h3>Total CPU Usage</h3>
-                    <div class="chart-container">
-                        <canvas id="cpuChart"></canvas>
+            <div id="cpuContent" class="collapsible-content">
+                <div class="charts-grid">
+                    <div class="card chart-card">
+                        <h3>Total CPU Usage</h3>
+
+                        <div class="chart-container">
+                            <canvas id="cpuChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card chart-card">
+                        <h3>Load Average</h3>
+
+                        <div class="chart-container">
+                            <canvas id="loadChart"></canvas>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card chart-card">
-                    <h3>Load Average</h3>
-                    <div class="chart-container">
-                        <canvas id="loadChart"></canvas>
+                <div class="card collapsible-card" data-section="cpuCores">
+                    <div class="card-header">
+                        <button class="collapse-toggle" type="button" data-collapse-target="coreUsage"
+                            aria-expanded="false" aria-controls="coreUsage">
+                            <span class="collapse-icon" aria-hidden="true">⌄</span>
+
+                            <h3>Per-core Usage</h3>
+                        </button>
+
+                        <span id="coreCount" class="badge">—</span>
                     </div>
-                </div>
-            </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3>Per-core Usage</h3>
-                    <span id="coreCount" class="badge">—</span>
+                    <div id="coreUsage" class="collapsible-content core-grid"></div>
                 </div>
-
-                <div id="coreUsage" class="core-grid"></div>
             </div>
         </section>
+
 
         <!-- Memory -->
-        <section class="section">
+        <section class="section collapsible-section" data-section="memory">
             <div class="section-title">
-                <h2>Memory</h2>
+                <button class="collapse-toggle" type="button" data-collapse-target="memoryContent" aria-expanded="true"
+                    aria-controls="memoryContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>Memory</h2>
+                </button>
             </div>
 
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <span class="metric-label">Used</span>
-                    <strong id="memoryUsed">—</strong>
+            <div id="memoryContent" class="collapsible-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Used</span>
+                        <strong id="memoryUsed">—</strong>
+                    </div>
+
+                    <div class="metric-card">
+                        <span class="metric-label">Available</span>
+                        <strong id="memoryAvailable">—</strong>
+                    </div>
+
+                    <div class="metric-card">
+                        <span class="metric-label">Total</span>
+                        <strong id="memoryTotal">—</strong>
+                    </div>
+
+                    <div class="metric-card">
+                        <span class="metric-label">Usage</span>
+                        <strong id="memoryPercentage">—</strong>
+                    </div>
                 </div>
 
-                <div class="metric-card">
-                    <span class="metric-label">Available</span>
-                    <strong id="memoryAvailable">—</strong>
-                </div>
+                <div class="card chart-card">
+                    <h3>Memory Usage</h3>
 
-                <div class="metric-card">
-                    <span class="metric-label">Total</span>
-                    <strong id="memoryTotal">—</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span class="metric-label">Usage</span>
-                    <strong id="memoryPercentage">—</strong>
-                </div>
-            </div>
-
-            <div class="card chart-card">
-                <h3>Memory Usage</h3>
-
-                <div class="chart-container">
-                    <canvas id="memoryChart"></canvas>
+                    <div class="chart-container">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
                 </div>
             </div>
         </section>
+
 
         <!-- Disk -->
-        <section class="section">
+        <section class="section collapsible-section" data-section="disk">
             <div class="section-title">
-                <h2>Disk</h2>
+                <button class="collapse-toggle" type="button" data-collapse-target="diskContent" aria-expanded="true"
+                    aria-controls="diskContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>Disk</h2>
+                </button>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3>Mount Points</h3>
-                    <span id="mountPointCount" class="badge">0</span>
+            <div id="diskContent" class="collapsible-content">
+                <!-- Mount Points cannot be collapsed -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Mount Points</h3>
+
+                        <span id="mountPointCount" class="badge">0</span>
+                    </div>
+
+                    <div id="diskStatus" class="disk-grid"></div>
                 </div>
 
-                <div id="diskStatus" class="disk-grid"></div>
-            </div>
+                <!-- Disk I/O is collapsed by default -->
+                <div class="card collapsible-card" data-section="diskIO">
+                    <div class="card-header">
+                        <button class="collapse-toggle" type="button" data-collapse-target="diskDevices"
+                            aria-expanded="false" aria-controls="diskDevices">
+                            <span class="collapse-icon" aria-hidden="true">⌄</span>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3>Disk I/O</h3>
+                            <h3>Disk I/O</h3>
+                        </button>
+                    </div>
+
+                    <div id="diskDevices" class="collapsible-content device-grid"></div>
                 </div>
-
-                <div id="diskDevices" class="device-grid"></div>
             </div>
         </section>
 
+
         <!-- Network -->
-        <section class="section">
+        <section class="section collapsible-section" data-section="network">
             <div class="section-title">
-                <h2>Network</h2>
+                <button class="collapse-toggle" type="button" data-collapse-target="networkContent" aria-expanded="true"
+                    aria-controls="networkContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>Network</h2>
+                </button>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3>Connectivity</h3>
-                    <span id="networkTargetCount" class="badge">0</span>
-                </div>
+            <div id="networkContent" class="collapsible-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Connectivity</h3>
 
-                <div id="networkStatus" class="network-grid"></div>
+                        <span id="networkTargetCount" class="badge">0</span>
+                    </div>
+
+                    <div id="networkStatus" class="network-grid"></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Logs -->
+        <section class="section collapsible-section" data-section="logs">
+            <div class="section-title">
+                <button class="collapse-toggle" type="button" data-collapse-target="logsContent" aria-expanded="false"
+                    aria-controls="logsContent">
+                    <span class="collapse-icon" aria-hidden="true">⌄</span>
+                    <h2>Logs</h2>
+                </button>
+
+                <div class="refresh-indicator">
+                    <span id="logConnectionStatus" class="status-dot"></span>
+
+                    <span id="logConnectionText">
+                        Connecting...
+                    </span>
+                </div>
+            </div>
+
+            <div id="logsContent" class="collapsible-content">
+                <div class="card logs-card">
+                    <div class="card-header">
+                        <h3>Application Logs</h3>
+
+                        <div class="logs-controls">
+                            <label>
+                                <span class="sr-only">Log level</span>
+
+                                <select id="logLevelFilter">
+                                    <option value="all">All</option>
+                                    <option value="DEBUG">Debug</option>
+                                    <option value="INFO">Info</option>
+                                    <option value="WARN">Warn</option>
+                                    <option value="ERROR">Error</option>
+                                </select>
+                            </label>
+
+                            <label class="logs-autoscroll">
+                                <input id="logAutoScroll" type="checkbox" checked>
+
+                                Auto-scroll
+                            </label>
+
+                            <button id="clearLogs" type="button">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="logs" class="logs-container">
+                        <div id="logsEmpty" class="empty-state">
+                            Waiting for logs...
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
     </div>
 
+    <button id="backToTop" class="back-to-top" type="button" aria-label="Вернуться в начало" title="Наверх">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" />
+        </svg>
+    </button>
+
+    <!-- Existing application logic -->
     <script src="./static/js/app.js"></script>
+
+    <!-- UI state/theme/date formatting -->
+    <script src="./static/js/ui.js"></script>
 </body>
 
 </html>

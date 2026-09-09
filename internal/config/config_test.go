@@ -1,5 +1,7 @@
 package config
 
+//=== FIXME: write new tests
+
 // func TestConfig_Validate(t *testing.T) {
 // 	tests := []struct {
 // 		name    string
@@ -102,7 +104,6 @@ package config
 // 			},
 // 			wantErr: true,
 // 		},
-// 		// TODO: Add test cases.
 // 	}
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {
@@ -265,7 +266,6 @@ package config
 // 	write := func(filepath, content string) error {
 // 		return os.WriteFile(filepath, []byte(content), 0644)
 // 	}
-// 	//=== TODO: improve tests
 // 	tests := []struct {
 // 		name       string
 // 		path       string
@@ -323,7 +323,6 @@ package config
 // 			prepare:    write,
 // 		},
 
-// 		//=== TODO: add test cases
 // 	}
 // 	for _, tt := range tests {
 // 		t.Run(tt.name, func(t *testing.T) {

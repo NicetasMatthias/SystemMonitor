@@ -4,10 +4,24 @@ let memoryChart = null;
 
 const updateInterval = 5000;
 
+let logEventSource = null;
+let logs = [];
+
+const maxDisplayedLogs = 1000;
+
 document.addEventListener("DOMContentLoaded", () => {
     fetchStats();
     setInterval(fetchStats, updateInterval);
+
+    initializeLogs();
 });
+
+
+/*
+ * --------------------------------------------------------------------------
+ * Statistics
+ * --------------------------------------------------------------------------
+ */
 
 async function fetchStats() {
     try {
@@ -56,6 +70,7 @@ async function fetchStats() {
         updateSystem(system);
 
         setConnectionStatus(true);
+
         document.getElementById("lastUpdate").textContent =
             `Updated ${new Date().toLocaleTimeString()}`;
 
@@ -63,6 +78,7 @@ async function fetchStats() {
         console.error("Error fetching stats:", error);
 
         setConnectionStatus(false);
+
         document.getElementById("lastUpdate").textContent =
             "Connection error";
     }
@@ -77,6 +93,10 @@ async function fetchStats() {
 
 function setConnectionStatus(connected) {
     const indicator = document.getElementById("connectionStatus");
+
+    if (!indicator) {
+        return;
+    }
 
     indicator.classList.toggle("connected", connected);
     indicator.classList.toggle("disconnected", !connected);
@@ -295,7 +315,7 @@ function updateCoreUsage(sample) {
 
         item.innerHTML = `
             <div class="core-header">
-                <span>Core ${core.id}</span>
+                <span>Core ${escapeHtml(core.id)}</span>
                 <strong>${usage.toFixed(1)}%</strong>
             </div>
 
@@ -474,30 +494,30 @@ function updateMountPoints(mountPoints) {
 
             ${capacity.valid
                 ? `
-                        <div class="disk-stats">
-                            <span>
-                                ${formatBytes(capacity.used_bytes)}
-                                /
-                                ${formatBytes(capacity.total_bytes)}
-                            </span>
+                    <div class="disk-stats">
+                        <span>
+                            ${formatBytes(capacity.used_bytes)}
+                            /
+                            ${formatBytes(capacity.total_bytes)}
+                        </span>
 
-                            <strong>
-                                ${usedPercent.toFixed(1)}%
-                            </strong>
-                        </div>
+                        <strong>
+                            ${usedPercent.toFixed(1)}%
+                        </strong>
+                    </div>
 
-                        <div class="progress-bar disk-progress">
-                            <div
-                                class="progress-fill ${getUsageClass(usedPercent)}"
-                                style="width: ${Math.min(usedPercent, 100)}%"
-                            ></div>
-                        </div>
-                    `
+                    <div class="progress-bar disk-progress">
+                        <div
+                            class="progress-fill ${getUsageClass(usedPercent)}"
+                            style="width: ${Math.min(usedPercent, 100)}%"
+                        ></div>
+                    </div>
+                `
                 : `
-                        <div class="unavailable">
-                            Capacity information unavailable
-                        </div>
-                    `
+                    <div class="unavailable">
+                        Capacity information unavailable
+                    </div>
+                `
             }
         `;
 
@@ -680,6 +700,7 @@ function updateSystem(stats) {
 
     setText("hostname", host.hostname);
     setText("os", host.os);
+
     setText(
         "platform",
         [host.platform, host.platform_version]
@@ -688,11 +709,7 @@ function updateSystem(stats) {
     );
 
     setText("architecture", host.architecture);
-
-    setText(
-        "kernelVersion",
-        host.kernel_version
-    );
+    setText("kernelVersion", host.kernel_version);
 
     const cpuParts = [];
 
@@ -744,12 +761,261 @@ function updateSystem(stats) {
 
 /*
  * --------------------------------------------------------------------------
+ * Logs
+ * --------------------------------------------------------------------------
+ */
+
+function initializeLogs() {
+    const filter = document.getElementById("logLevelFilter");
+    const autoScroll = document.getElementById("logAutoScroll");
+    const clearButton = document.getElementById("clearLogs");
+
+    filter.addEventListener("change", renderLogs);
+
+    clearButton.addEventListener("click", () => {
+        logs = [];
+        renderLogs();
+    });
+
+    autoScroll.addEventListener("change", () => {
+        if (autoScroll.checked) {
+            scrollLogsToBottom();
+        }
+    });
+
+    connectLogs();
+}
+
+function connectLogs() {
+    if (logEventSource) {
+        logEventSource.close();
+    }
+
+    setLogConnectionStatus(false, "Connecting...");
+
+    logEventSource = new EventSource("/api/logs/stream");
+
+    logEventSource.onopen = () => {
+        setLogConnectionStatus(true, "Connected");
+    };
+
+    logEventSource.onmessage = event => {
+        try {
+            const entry = JSON.parse(event.data);
+
+            addLog(entry);
+
+            setLogConnectionStatus(true, "Connected");
+        } catch (error) {
+            console.error("Failed to parse log event:", error);
+        }
+    };
+
+    logEventSource.onerror = () => {
+        setLogConnectionStatus(false, "Reconnecting...");
+    };
+}
+
+function setLogConnectionStatus(connected, text) {
+    const indicator =
+        document.getElementById("logConnectionStatus");
+
+    const label =
+        document.getElementById("logConnectionText");
+
+    if (!indicator || !label) {
+        return;
+    }
+
+    indicator.classList.toggle("connected", connected);
+    indicator.classList.toggle("disconnected", !connected);
+
+    label.textContent = text;
+}
+
+function addLog(entry) {
+    if (!entry) {
+        return;
+    }
+
+    logs.push(entry);
+
+    if (logs.length > maxDisplayedLogs) {
+        logs.splice(0, logs.length - maxDisplayedLogs);
+    }
+
+    renderLogs();
+}
+
+function renderLogs() {
+    const container = document.getElementById("logs");
+    const empty = document.getElementById("logsEmpty");
+    const filter = document.getElementById("logLevelFilter");
+
+    if (!container) {
+        return;
+    }
+
+    const selectedLevel = filter
+        ? filter.value
+        : "all";
+
+    const filteredLogs = selectedLevel === "all"
+        ? logs
+        : logs.filter(entry =>
+            normalizeLogLevel(entry.level) === selectedLevel
+        );
+
+    container.innerHTML = "";
+
+    if (filteredLogs.length === 0) {
+        const emptyElement = document.createElement("div");
+
+        emptyElement.className = "empty-state";
+        emptyElement.textContent =
+            logs.length === 0
+                ? "Waiting for logs..."
+                : "No logs match the selected level";
+
+        container.appendChild(emptyElement);
+
+        return;
+    }
+
+    for (const entry of filteredLogs) {
+        container.appendChild(createLogElement(entry));
+    }
+
+    if (isAutoScrollEnabled()) {
+        scrollLogsToBottom();
+    }
+}
+
+function createLogElement(entry) {
+    const item = document.createElement("div");
+
+    const level = normalizeLogLevel(entry.level);
+
+    item.className = `log-entry log-${level.toLowerCase()}`;
+
+    const time = document.createElement("span");
+
+    time.className = "log-time";
+    time.textContent = formatDateTime(entry.time);
+
+    const levelElement = document.createElement("span");
+
+    levelElement.className = "log-level";
+    levelElement.textContent = level;
+
+    const message = document.createElement("span");
+
+    message.className = "log-message";
+    message.textContent = entry.message || "";
+
+    item.appendChild(time);
+    item.appendChild(levelElement);
+    item.appendChild(message);
+
+    if (
+        entry.attrs &&
+        typeof entry.attrs === "object" &&
+        Object.keys(entry.attrs).length > 0
+    ) {
+        const attrs = document.createElement("span");
+
+        attrs.className = "log-attrs";
+        attrs.textContent = formatLogAttrs(entry.attrs);
+
+        item.appendChild(attrs);
+    }
+
+    return item;
+}
+
+function formatLogAttrs(attrs) {
+    return Object.entries(attrs)
+        .map(([key, value]) => {
+            return `${key}=${formatLogAttrValue(value)}`;
+        })
+        .join(" ");
+}
+
+function formatLogAttrValue(value) {
+    if (value === null || value === undefined) {
+        return "null";
+    }
+
+    if (typeof value === "object") {
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+
+    return String(value);
+}
+
+function normalizeLogLevel(level) {
+    if (!level) {
+        return "INFO";
+    }
+
+    const value = String(level).toUpperCase();
+
+    if (value === "WARNING") {
+        return "WARN";
+    }
+
+    if (value === "DEBUG") {
+        return "DEBUG";
+    }
+
+    if (value === "WARN") {
+        return "WARN";
+    }
+
+    if (value === "ERROR") {
+        return "ERROR";
+    }
+
+    return "INFO";
+}
+
+function isAutoScrollEnabled() {
+    const checkbox =
+        document.getElementById("logAutoScroll");
+
+    return !checkbox || checkbox.checked;
+}
+
+function scrollLogsToBottom() {
+    const container =
+        document.getElementById("logs");
+
+    if (!container) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+
+/*
+ * --------------------------------------------------------------------------
  * Formatting
  * --------------------------------------------------------------------------
  */
 
 function formatBytes(bytes) {
-    if (bytes === null || bytes === undefined || !Number.isFinite(Number(bytes))) {
+    if (
+        bytes === null ||
+        bytes === undefined ||
+        !Number.isFinite(Number(bytes))
+    ) {
         return "—";
     }
 
@@ -759,7 +1025,14 @@ function formatBytes(bytes) {
         return "0 B";
     }
 
-    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    const units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+        "TB",
+        "PB"
+    ];
 
     const exponent =
         Math.min(
@@ -770,7 +1043,9 @@ function formatBytes(bytes) {
     const converted =
         value / Math.pow(1024, exponent);
 
-    return `${converted.toFixed(exponent === 0 ? 0 : 2)} ${units[exponent]}`;
+    return `${converted.toFixed(
+        exponent === 0 ? 0 : 2
+    )} ${units[exponent]}`;
 }
 
 function formatBytesPerSecond(bytes) {
@@ -778,7 +1053,11 @@ function formatBytesPerSecond(bytes) {
 }
 
 function formatNumber(value) {
-    if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+    ) {
         return "—";
     }
 
@@ -824,7 +1103,9 @@ function formatUptime(bootTime) {
     const now = new Date();
 
     let seconds =
-        Math.floor((now.getTime() - boot.getTime()) / 1000);
+        Math.floor(
+            (now.getTime() - boot.getTime()) / 1000
+        );
 
     if (seconds < 0) {
         return "—";

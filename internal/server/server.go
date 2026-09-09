@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
+	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
 	"github.com/NicetasMatthias/SystemMonitor/internal/web"
 	"github.com/gorilla/mux"
 )
@@ -33,6 +35,8 @@ type Server struct {
 	srv       *http.Server
 	port      string
 
+	logsStorage logger.LogStore
+
 	errCh chan error
 }
 
@@ -40,12 +44,13 @@ type apiError struct {
 	Error string `json:"error"`
 }
 
-func New(c statsCollector, cfg Config) (*Server, error) {
+func New(c statsCollector, logsStorage logger.LogStore, cfg Config) (*Server, error) {
 	s := &Server{
-		router:    mux.NewRouter(),
-		collector: c,
-		port:      cfg.Port,
-		errCh:     make(chan error, 1),
+		router:      mux.NewRouter(),
+		collector:   c,
+		port:        cfg.Port,
+		errCh:       make(chan error, 1),
+		logsStorage: logsStorage,
 	}
 
 	s.templates = template.Must(template.ParseFS(web.FS, "templates/*.html"))
@@ -100,8 +105,6 @@ func (s *Server) routes() error {
 		return err
 	}
 
-	//=== TODO: improve processing MethodNotAllowed
-
 	s.router.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", http.MethodGet)
 		writeAPIError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -128,8 +131,10 @@ func (s *Server) routes() error {
 	s.router.HandleFunc("/api/stats/network/", s.handleApiStatsNetwork()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system", s.handleApiStatsSystem()).Methods(http.MethodGet)
 	s.router.HandleFunc("/api/stats/system/", s.handleApiStatsSystem()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/logs/stream", s.handleApiLogsStream()).Methods(http.MethodGet)
+	s.router.HandleFunc("/api/logs/stream/", s.handleApiLogsStream()).Methods(http.MethodGet)
 
-	return nil //=== TODO: сделать проверки где можно
+	return nil
 }
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {
@@ -205,6 +210,66 @@ func (s *Server) handleApiStatsNetwork() http.HandlerFunc {
 func (s *Server) handleApiStatsSystem() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, s.collector.GetSystem())
+	}
+}
+
+func (s *Server) handleApiLogsStream() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.logsStorage == nil {
+			writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"logs disabled",
+			)
+			return
+		}
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			writeAPIError(
+				w,
+				http.StatusInternalServerError,
+				"streaming unsupported",
+			)
+			return
+		}
+
+		sub := s.logsStorage.Subscribe()
+		defer sub.Cancel()
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		for _, entry := range sub.History {
+			data, err := json.Marshal(entry)
+			if err != nil {
+				continue
+			}
+
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+				slog.Warn("failed to write data to SSE", slog.Any("error", err))
+			}
+			flusher.Flush()
+		}
+
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+
+			case entry := <-sub.Events:
+				data, err := json.Marshal(entry)
+				if err != nil {
+					continue
+				}
+
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", data); err != nil {
+					slog.Warn("failed to write data to SSE", slog.Any("error", err))
+				}
+				flusher.Flush()
+			}
+		}
 	}
 }
 
