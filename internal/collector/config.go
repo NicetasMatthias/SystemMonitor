@@ -159,7 +159,7 @@ func (t *NetworkTarget) UnmarshalJSON(data []byte) error {
 	raw.Timeout = 5
 
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil
+		return err
 	}
 	raw.Transport = strings.ToLower(raw.Transport)
 	raw.Type = strings.ToLower(raw.Type)
@@ -172,7 +172,6 @@ func (t *NetworkTarget) UnmarshalJSON(data []byte) error {
 			raw.Transport = "tcp"
 		}
 	}
-
 	*t = NetworkTarget(raw)
 	return nil
 }

@@ -22,8 +22,8 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("failed to convert server port to integer: %v", err)
 	}
 
-	if port <= 0 {
-		return fmt.Errorf("server port must be a string containing a positive integer, got = %s", c.Port)
+	if port <= 0 || port > 65535 {
+		return fmt.Errorf("server port must be a string containing a positive integer in the range [1, 65535]., got = %s", c.Port)
 	}
 
 	return nil

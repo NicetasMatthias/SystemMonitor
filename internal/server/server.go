@@ -11,7 +11,6 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 	"github.com/NicetasMatthias/SystemMonitor/internal/logger"
@@ -60,10 +59,8 @@ func New(c statsCollector, logsStorage logger.LogStore, cfg Config) (*Server, er
 	}
 
 	s.srv = &http.Server{
-		Handler:      s.router,
-		Addr:         ":" + s.port,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		Handler: s.router,
+		Addr:    ":" + s.port,
 	}
 	return s, nil
 }

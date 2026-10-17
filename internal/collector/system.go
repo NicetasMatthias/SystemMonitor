@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -93,9 +94,11 @@ func collectActivityInfo() ActivityInfo {
 	if users, err := host.Users(); err == nil {
 		r.SessionCount = len(users)
 	} else {
-		slog.Warn("error collecting sessions count",
-			slog.Any("error", err),
-		)
+		if !strings.Contains(err.Error(), "no such file or directory") {
+			slog.Warn("error collecting sessions count",
+				slog.Any("error", err),
+			)
+		}
 		r.SessionCount = 0
 	}
 
