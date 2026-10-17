@@ -1,27 +1,25 @@
-package collector_test
+package collector
 
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/NicetasMatthias/SystemMonitor/internal/collector"
 )
 
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  collector.Config
+		config  Config
 		wantErr bool
 	}{
 		{
 			name:    "default config",
-			config:  collector.DefaultConfig(),
+			config:  DefaultConfig(),
 			wantErr: false,
 		},
 		{
 			name: "zero cpu interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Cpu.Interval = 0
 				return cfg
 			}(),
@@ -29,8 +27,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative cpu interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Cpu.Interval = -1
 				return cfg
 			}(),
@@ -38,8 +36,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "zero cpu history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Cpu.MaxHistorySize = 0
 				return cfg
 			}(),
@@ -47,8 +45,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative cpu history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Cpu.MaxHistorySize = -1
 				return cfg
 			}(),
@@ -57,8 +55,8 @@ func TestConfig_Validate(t *testing.T) {
 
 		{
 			name: "zero disk interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Disk.Interval = 0
 				return cfg
 			}(),
@@ -66,8 +64,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative disk interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Disk.Interval = -1
 				return cfg
 			}(),
@@ -75,8 +73,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "zero disk history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Disk.MaxHistorySize = 0
 				return cfg
 			}(),
@@ -84,8 +82,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative disk history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Disk.MaxHistorySize = -1
 				return cfg
 			}(),
@@ -94,8 +92,8 @@ func TestConfig_Validate(t *testing.T) {
 
 		{
 			name: "zero memory interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Memory.Interval = 0
 				return cfg
 			}(),
@@ -103,8 +101,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative memory interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Memory.Interval = -1
 				return cfg
 			}(),
@@ -112,8 +110,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "zero memory history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Memory.MaxHistorySize = 0
 				return cfg
 			}(),
@@ -121,8 +119,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative memory history size",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.Memory.MaxHistorySize = -1
 				return cfg
 			}(),
@@ -131,8 +129,8 @@ func TestConfig_Validate(t *testing.T) {
 
 		{
 			name: "zero system interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.System.Interval = 0
 				return cfg
 			}(),
@@ -140,8 +138,8 @@ func TestConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "negative system interval",
-			config: func() collector.Config {
-				cfg := collector.DefaultConfig()
+			config: func() Config {
+				cfg := DefaultConfig()
 				cfg.System.Interval = -1
 				return cfg
 			}(),
@@ -165,7 +163,7 @@ func TestConfig_Validate(t *testing.T) {
 func TestConfig_Validate_NetworkTargets(t *testing.T) {
 	tests := []struct {
 		name    string
-		targets []collector.NetworkTarget
+		targets []NetworkTarget
 		wantErr bool
 	}{
 		{
@@ -175,10 +173,10 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "valid http target",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "tcp",
 					Interval:  10,
@@ -189,7 +187,7 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "valid DNS target",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "dns",
 					Address:   "example.com:53",
@@ -202,11 +200,25 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid DNS with TCP transport",
+			targets: []NetworkTarget{
+				{
+					Name:      "dns",
+					Address:   "127.0.0.1:53",
+					Type:      "dns",
+					Transport: "tcp",
+					Interval:  10,
+					Timeout:   5,
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "empty target name",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "",
-					Address:   "https://example.com",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "tcp",
 					Interval:  10,
@@ -217,7 +229,7 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "empty target address",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
 					Address:   "",
@@ -231,10 +243,10 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "invalid target type",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
 					Type:      "invalid",
 					Transport: "tcp",
 					Interval:  10,
@@ -245,10 +257,10 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "invalid transport type",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "invalid",
 					Interval:  10,
@@ -259,10 +271,10 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 		},
 		{
 			name: "http with udp transport",
-			targets: []collector.NetworkTarget{
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "udp",
 					Interval:  10,
@@ -272,11 +284,25 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "negative interval",
-			targets: []collector.NetworkTarget{
+			name: "zero target interval",
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
+					Type:      "http",
+					Transport: "tcp",
+					Interval:  0,
+					Timeout:   5,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative interval",
+			targets: []NetworkTarget{
+				{
+					Name:      "website",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "tcp",
 					Interval:  -10,
@@ -286,11 +312,25 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "negative timeout",
-			targets: []collector.NetworkTarget{
+			name: "zero target timeout",
+			targets: []NetworkTarget{
 				{
 					Name:      "website",
-					Address:   "https://example.com",
+					Address:   "example.com",
+					Type:      "http",
+					Transport: "tcp",
+					Interval:  10,
+					Timeout:   0,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative timeout",
+			targets: []NetworkTarget{
+				{
+					Name:      "website",
+					Address:   "example.com",
 					Type:      "http",
 					Transport: "tcp",
 					Interval:  10,
@@ -302,7 +342,7 @@ func TestConfig_Validate_NetworkTargets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := collector.DefaultConfig()
+			cfg := DefaultConfig()
 			cfg.Network.Targets = tt.targets
 			err := cfg.Validate()
 			if (err != nil) != tt.wantErr {
@@ -326,7 +366,7 @@ func TestNetworkTarget_UnmarshalJSON(t *testing.T) {
 			name: "valid HTTP target",
 			input: `{
 				"name": "website",
-				"address": "https://example.com",
+				"address": "example.com",
 				"type": "http",
 				"transport": "tcp"
 			}`,
@@ -366,7 +406,7 @@ func TestNetworkTarget_UnmarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var target collector.NetworkTarget
+			var target NetworkTarget
 
 			err := json.Unmarshal([]byte(tt.input), &target)
 
@@ -453,7 +493,7 @@ func TestNetworkTarget_UnmarshalJSON_EmptyFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var target collector.NetworkTarget
+			var target NetworkTarget
 
 			err := json.Unmarshal([]byte(tt.input), &target)
 

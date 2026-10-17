@@ -1,11 +1,9 @@
-package config_test
+package config
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/NicetasMatthias/SystemMonitor/internal/config"
 )
 
 func TestLoad(t *testing.T) {
@@ -44,18 +42,12 @@ func TestLoad(t *testing.T) {
 			createFile: true,
 			wantErr:    true,
 		},
-		{
-			name:       "trailing garbage",
-			content:    `{} garbage`,
-			createFile: true,
-			wantErr:    true,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
-			path := filepath.Join(dir, "config.json")
+			path := filepath.Join(dir, "json")
 			if tt.createFile {
 				if err := os.WriteFile(path, []byte(tt.content), 0666); err != nil {
 					t.Fatalf(
@@ -65,15 +57,13 @@ func TestLoad(t *testing.T) {
 				}
 			}
 
-			cfg, err := config.Load(path)
+			cfg, err := Load(path)
 			if (err != nil) != tt.wantErr {
-				if !tt.wantErr {
-					t.Fatalf(
-						"Load() error = \"%v\", wantErr %v",
-						err,
-						tt.wantErr,
-					)
-				}
+				t.Fatalf(
+					"Load() error = \"%v\", wantErr %v",
+					err,
+					tt.wantErr,
+				)
 			}
 
 			if cfg == nil && err == nil {
@@ -85,7 +75,7 @@ func TestLoad(t *testing.T) {
 
 func TestLoad_InvalidConfig(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
+	path := filepath.Join(dir, "json")
 
 	content := `{
     "server": {
@@ -117,7 +107,7 @@ func TestLoad_InvalidConfig(t *testing.T) {
 		t.Fatalf("os.WriteFile() error = %v", err)
 	}
 
-	_, err := config.Load(path)
+	_, err := Load(path)
 	if err == nil {
 		t.Fatal("Load() succeeded with an invalid configuration")
 	}

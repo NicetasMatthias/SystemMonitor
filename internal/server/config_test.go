@@ -1,9 +1,7 @@
-package server_test
+package server
 
 import (
 	"testing"
-
-	"github.com/NicetasMatthias/SystemMonitor/internal/server"
 )
 
 func TestConfig_Validate(t *testing.T) {
@@ -65,7 +63,7 @@ func TestConfig_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := server.Config{
+			cfg := Config{
 				Port: tt.port,
 			}
 			err := cfg.Validate()
